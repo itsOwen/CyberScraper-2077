@@ -40,7 +40,7 @@ Check out our [YouTube video](https://www.youtube.com/watch?v=iATSd5Ijl4M) for a
 
 1. Clone this repository:
    ```bash
-   git clone https://github.com/itsOwen/cyberscraper-2077.git
+   git clone https://github.com/itsOwen/CyberScraper-2077.git
    cd cyberscraper-2077
    ```
 
@@ -72,7 +72,7 @@ Check out our [YouTube video](https://www.youtube.com/watch?v=iATSd5Ijl4M) for a
 
 ## 🤝 Contributing
 
-We welcome all cyberpunks, netrunners, and code samurais to contribute to CyberScraper 2077! Check out our [Contribution Guidelines](CONTRIBUTING.md) to get started.
+We welcome all cyberpunks, netrunners, and code samurais to contribute to CyberScraper 2077!
 
 ## 🔧 Troubleshooting
 

@@ -1,0 +1,14 @@
+streamlit
+asyncio
+pandas
+tiktoken
+langchain
+langchain-community
+openai
+playwright
+openpyxl
+xlsxwriter
+beautifulsoup4
+markdown
+aiohttp
+python-dotenv

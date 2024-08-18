@@ -4,6 +4,7 @@ pandas
 tiktoken
 langchain
 langchain-community
+langchain_openai
 openai
 playwright
 openpyxl
@@ -12,3 +13,4 @@ beautifulsoup4
 markdown
 aiohttp
 python-dotenv
+watchdog

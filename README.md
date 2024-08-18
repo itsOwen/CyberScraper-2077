@@ -55,6 +55,11 @@ Check out our [YouTube video](https://www.youtube.com/watch?v=iATSd5Ijl4M) for a
    pip install -r requirements.txt
    ```
 
+4. Install the playwright:
+   ```bash
+   playwright install
+   ```
+
 ## 🚀 Usage
 
 1. Fire up the Streamlit app:

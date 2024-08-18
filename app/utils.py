@@ -28,7 +28,7 @@ def loading_animation(process_func, *args, **kwargs):
             return None
         
         loading_message = get_loading_message()
-        loading_placeholder.text(f"{loading_message}\n\nIn progress...")
+        loading_placeholder.text(loading_message)
         
         try:
             result = process_func(*args, **kwargs)

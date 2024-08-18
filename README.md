@@ -8,8 +8,8 @@
   <img src="https://i.postimg.cc/xChxGLcL/Cyber-Scraper.jpg">
 </p>
 
-[![Python](https://img.shields.io/badge/Python-3.7%2B-blue)](https://www.python.org/downloads/)
-[![Streamlit](https://img.shields.io/badge/Streamlit-1.0%2B-FF4B4B)](https://streamlit.io/)
+[![Python](https://img.shields.io/badge/Python-blue)](https://www.python.org/downloads/)
+[![Streamlit](https://img.shields.io/badge/Streamlit-FF4B4B)](https://streamlit.io/)
 [![License](https://img.shields.io/badge/License-MIT-green.svg)](https://opensource.org/licenses/MIT)
 [![PRs Welcome](https://img.shields.io/badge/PRs-welcome-brightgreen.svg)](http://makeapullrequest.com)
 

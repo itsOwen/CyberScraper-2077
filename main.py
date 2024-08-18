@@ -1,8 +1,20 @@
 import streamlit as st
-import time  
 from app.streamlit_web_scraper_chat import StreamlitWebScraperChat
 from app.ui_components import display_info_icons, display_message
-from app.utils import get_loading_message
+from app.utils import loading_animation, get_loading_message
+
+def safe_process_message(web_scraper_chat, message):
+    if message is None or message.strip() == "":
+        return "I'm sorry, but I didn't receive any input. Could you please try again?"
+    try:
+        return web_scraper_chat.process_message(message)
+    except AttributeError as e:
+        if "'NoneType' object has no attribute 'lower'" in str(e):
+            return "I encountered an issue while processing your request. It seems like I received an unexpected empty value. Could you please try rephrasing your input?"
+        else:
+            raise e
+    except Exception as e:
+        return f"An unexpected error occurred: {str(e)}. Please try again or contact support if the issue persists."
 
 def main():
     st.set_page_config(page_title="CyberScraper 2077", page_icon="🌐", layout="wide")
@@ -32,7 +44,10 @@ def main():
 
     if "messages" not in st.session_state:
         st.session_state.messages = []
-    
+
+    if "processing" not in st.session_state:
+        st.session_state.processing = False
+
     chat_container = st.container()
 
     with chat_container:
@@ -40,30 +55,26 @@ def main():
             with st.chat_message(message["role"]):
                 display_message(message)
 
-    if prompt := st.chat_input("Enter the URL to scrape or ask a question regarding the data"):
+    if prompt := st.chat_input("Enter the URL to scrape or ask a question regarding the data", key="user_input"):
         st.session_state.messages.append({"role": "user", "content": prompt})
-        with chat_container:
-            with st.chat_message("user"):
-                st.markdown(prompt)
+        st.session_state.processing = True
+        st.rerun()
 
-            with st.chat_message("assistant"):
-                message_placeholder = st.empty()
-                loading_placeholder = st.empty()
-                
-                while True:
-                    loading_placeholder.text(get_loading_message())
-                    try:
-                        full_response = st.session_state.web_scraper_chat.process_message(prompt)
-                        break
-                    except Exception as e:
-                        st.error(f"An error occurred: {str(e)}. Retrying...")
-                        time.sleep(1)
-                
-                loading_placeholder.empty()
-                
-                display_message({"role": "assistant", "content": full_response})
-        
-        st.session_state.messages.append({"role": "assistant", "content": full_response})
+    if st.session_state.processing:
+        with st.chat_message("assistant"):
+            try:
+                full_response = loading_animation(
+                    safe_process_message,
+                    st.session_state.web_scraper_chat,
+                    st.session_state.messages[-1]["content"]
+                )
+                if full_response is not None:
+                    st.session_state.messages.append({"role": "assistant", "content": full_response})
+            except Exception as e:
+                st.error(f"An unexpected error occurred: {str(e)}")
+            finally:
+                st.session_state.processing = False
+        st.rerun()
 
     st.markdown(
         """

@@ -1,3 +1,5 @@
+import streamlit as st
+import time
 import random
 
 def get_loading_message():
@@ -14,3 +16,25 @@ def get_loading_message():
         "Crashing through the data barriers, Johnny-style..."
     ]
     return random.choice(messages)
+
+def loading_animation(process_func, *args, **kwargs):
+    loading_placeholder = st.empty()
+    result = None
+    start_time = time.time()
+    while result is None:
+        elapsed_time = time.time() - start_time
+        if elapsed_time > 30:  # Timeout after 30 seconds
+            loading_placeholder.error("Request timed out. Please try again.")
+            return None
+        
+        loading_message = get_loading_message()
+        loading_placeholder.text(f"{loading_message}\n\nIn progress...")
+        
+        try:
+            result = process_func(*args, **kwargs)
+        except Exception as e:
+            loading_placeholder.error(f"An error occurred: {str(e)}. Retrying...")
+            time.sleep(1)
+    
+    loading_placeholder.empty()
+    return result

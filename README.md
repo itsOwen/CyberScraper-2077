@@ -26,11 +26,12 @@ Whether you're a corpo data analyst, a street-smart netrunner, or just someone l
 - 🤖 **AI-Powered Extraction**: Utilizes cutting-edge AI models to understand and parse web content intelligently.
 - 💻 **Sleek Streamlit Interface**: User-friendly GUI that even a chrome-armed street samurai could navigate.
 - 🔄 **Multi-Format Support**: Export your data in JSON, CSV, HTML, SQL or Excel – whatever fits your cyberdeck.
-- 🌐 **Stealth Mode**: Built-in proxy support to keep you ghosting through the net. (Currently under development)
+- 🌐 **Stealth Mode**: Implemented stealth mode parameters that helps it from getting detected as bot.
 - 🚀 **Async Operations**: Lightning-fast scraping that would make a Trauma Team jealous.
 - 🧠 **Smart Parsing**: Structures scraped content as if it was extracted straight from the engram of a master netrunner.
 - 🛡️ **Ethical Scraping**: Respects robots.txt and site policies. We may be in 2077, but we still have standards.
-- 🛡️ **Navigate through the Pages**: Navigate through the webpage and scrap the data from different pages. (Coming Soon)
+- 🌐 **Proxy Mode (Coming Soon)**: Built-in proxy support to keep you ghosting through the net.
+- 🛡️ **Navigate through the Pages (Coming Soon)**: Navigate through the webpage and scrap the data from different pages. 
 
 ## 🎥 Demo
 
@@ -58,6 +59,11 @@ Check out our [YouTube video](https://www.youtube.com/watch?v=iATSd5Ijl4M) for a
 4. Install the playwright:
    ```bash
    playwright install
+   ```
+
+5. Set OpenAI Key in your enviornment:
+   ```bash
+   export OPENAI_API_KEY='your-api-key-here'
    ```
 
 ## 🚀 Usage

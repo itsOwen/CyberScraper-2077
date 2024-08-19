@@ -3,6 +3,7 @@ from typing import Dict, Any, Optional, List
 import json
 import pandas as pd
 from io import BytesIO
+import re
 from .models import Models
 from .scrapers import PlaywrightScraper, HTMLScraper, JSONScraper
 from .utils.proxy_manager import ProxyManager
@@ -11,6 +12,7 @@ from langchain.prompts import PromptTemplate
 from langchain.schema.runnable import RunnableSequence
 from langchain.text_splitter import RecursiveCharacterTextSplitter
 import tiktoken
+import time
 
 class WebExtractor:
     def __init__(self, model_name: str = "gpt-4o-mini", model_kwargs: Dict[str, Any] = None, proxy: Optional[str] = None):
@@ -23,6 +25,7 @@ class WebExtractor:
         self.markdown_formatter = MarkdownFormatter()
         self.current_url = None
         self.current_content = None
+        self.preprocessed_content = None
         self.conversation_history: List[str] = []
         self.text_splitter = RecursiveCharacterTextSplitter(
             chunk_size=32000,
@@ -53,15 +56,24 @@ class WebExtractor:
         self.current_url = url
         proxy = await self.proxy_manager.get_proxy()
         self.current_content = await self.playwright_scraper.fetch_content(self.current_url, proxy)
-        return f"I've fetched the content from {self.current_url}. What would you like to know about it?"
+        self.preprocessed_content = self._preprocess_content(self.current_content)
+        return f"I've fetched and preprocessed the content from {self.current_url}. What would you like to know about it?"
+
+    def _preprocess_content(self, content: str) -> str:
+        content = re.sub(r'<script\b[^>]*>[\s\S]*?</script>', '', content)
+        content = re.sub(r'<style\b[^>]*>[\s\S]*?</style>', '', content)
+        content = re.sub(r'<!--[\s\S]*?-->', '', content)
+        content = re.sub(r'<(?!/?(?:table|tr|th|td|thead|tbody|ul|ol|li|p|h[1-6]|br|hr)[>\s])\/?[^>]*>', '', content)
+        content = re.sub(r'\s+', ' ', content)
+        return content.strip()
 
     async def _extract_info(self, query: str) -> str:
-        content_tokens = self.num_tokens_from_string(self.current_content)
+        content_tokens = self.num_tokens_from_string(self.preprocessed_content)
         
         extraction_prompt = PromptTemplate(
             input_variables=["webpage_content", "query"],
             template="""You are an AI assistant that helps with web scraping tasks. 
-            Based on the following webpage content and the user's request, extract the relevant information.
+            Based on the following preprocessed webpage content and the user's request, extract the relevant information.
             Present the data in a structured format as specified by the user's query:
             - If the user asks for JSON, respond with a JSON array of objects.
             - If the user asks for CSV, respond with CSV data (including headers).
@@ -76,7 +88,7 @@ class WebExtractor:
             If the user asks for all extractable data, provide all entries you can find.
             Ensure that the extracted data accurately reflects the content of the webpage.
             
-            Webpage content:
+            Preprocessed webpage content:
             {webpage_content}
             
             Human: {query}
@@ -85,16 +97,15 @@ class WebExtractor:
 
         if content_tokens <= self.max_tokens - 1000:
             chain = RunnableSequence(extraction_prompt | self.model)
-            response = await chain.ainvoke({"webpage_content": self.current_content, "query": query})
+            response = await chain.ainvoke({"webpage_content": self.preprocessed_content, "query": query})
             extracted_data = response.content
         else:
-            chunks = self.text_splitter.split_text(self.current_content)
+            chunks = self.optimized_text_splitter(self.preprocessed_content)
             all_extracted_data = []
             for chunk in chunks:
                 chain = RunnableSequence(extraction_prompt | self.model)
                 response = await chain.ainvoke({"webpage_content": chunk, "query": query})
                 all_extracted_data.append(response.content)
-            
             extracted_data = "\n".join(all_extracted_data)
 
         if 'json' in query.lower():
@@ -106,8 +117,12 @@ class WebExtractor:
         else:
             return self._format_as_text(extracted_data)
 
+    def optimized_text_splitter(self, text: str) -> List[str]:
+        return self.text_splitter.split_text(text)
+
     def _format_as_json(self, data: str) -> str:
         return data
+
     def _format_as_csv(self, data: str) -> str:
         return data
 
@@ -115,18 +130,13 @@ class WebExtractor:
         try:
             lines = data.strip().split('\n')
             rows = [line.split('|') for line in lines if line.strip()]
-            
             df = pd.DataFrame(rows[1:], columns=[col.strip() for col in rows[0]])
-            
             output_filename = "output.xlsx"
-            
             with pd.ExcelWriter(output_filename, engine='xlsxwriter') as writer:
                 df.to_excel(writer, index=False)
-                
             return f"Excel data saved to {output_filename}"
-        
         except Exception as e:
-            return f"Error: Unable to convert to Excel format. {str(e)}. Raw data: {data[:500]}..."  # Limit raw data preview
+            return f"Error: Unable to convert to Excel format. {str(e)}. Raw data: {data[:500]}..."
 
     def _format_as_text(self, data: str) -> str:
         try:
@@ -138,10 +148,8 @@ class WebExtractor:
     async def save_data(self, filename: str) -> str:
         if not self.current_content:
             return "No data to save. Please fetch a webpage first."
-        
         with open(filename, 'w', encoding='utf-8') as f:
             f.write(self.current_content)
-        
         return f"Data saved to {filename}"
 
     def format_to_markdown(self, text: str) -> str:

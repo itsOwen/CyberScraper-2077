@@ -180,7 +180,7 @@ def main():
             for chat_id, chat_data in chats:
                 messages = chat_data['messages']
                 if messages:
-                    button_label = f"🗨️ {messages[0]['content'][:25]}..."
+                    button_label = f"{messages[0]['content'][:25]}..."
                 else:
                     button_label = "🗨️ Empty Chat"
                 

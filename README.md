@@ -109,6 +109,26 @@ Got questions? Need support? Want to hire me for a gig?
 - 🐦 Twitter: [@_owensingh](https://x.com/_owensingh)
 - 💬 Website: [Portfolio](https://www.owensingh.com)
 
+## 🚨 Disclaimer
+
+Listen up, choombas! Before you jack into this code, you better understand the risks. Here's the lowdown in plain language:
+
+1. This software is provided "as is", without warranty of any kind, express or implied.
+
+2. The authors are not liable for any damages or losses resulting from the use of this software.
+
+3. This tool is intended for educational and research purposes only. Any illegal use is strictly prohibited.
+
+4. We do not guarantee the accuracy, completeness, or reliability of any data obtained through this tool.
+
+5. By using this software, you acknowledge that you are doing so at your own risk.
+
+6. You are responsible for complying with all applicable laws and regulations in your use of this software.
+
+7. We reserve the right to modify or discontinue the software at any time without notice.
+
+Remember, samurai: In the dark future of the NET, knowledge is power, but it's also a double-edged sword. Use this tool wisely, and may your connection always be strong and your firewalls impenetrable. Stay frosty out there in the digital frontier.
+
 ---
 
 <p align="center">

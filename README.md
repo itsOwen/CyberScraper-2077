@@ -72,8 +72,7 @@ Check out our [YouTube video](https://www.youtube.com/watch?v=iATSd5Ijl4M) for a
    ```bash
    set OPENAI_API_KEY="your-api-key-here"
    ```
-
-6 If you want to use the experminal Ollama Branch:
+6. If you want to use the experminal Ollama Branch:
    ```bash
    1. git checkout ollama_experimental
    2. Setup Ollama using `pip install ollama`

@@ -27,6 +27,7 @@ Whether you're a corpo data analyst, a street-smart netrunner, or just someone l
 - 💻 **Sleek Streamlit Interface**: User-friendly GUI that even a chrome-armed street samurai could navigate.
 - 🔄 **Multi-Format Support**: Export your data in JSON, CSV, HTML, SQL or Excel – whatever fits your cyberdeck.
 - 🌐 **Stealth Mode**: Implemented stealth mode parameters that helps it from getting detected as bot.
+- 🤖 **Ollama Support** (Experminal Branch): Use a huge libarary of open source AI.
 - 🚀 **Async Operations**: Lightning-fast scraping that would make a Trauma Team jealous.
 - 🧠 **Smart Parsing**: Structures scraped content as if it was extracted straight from the engram of a master netrunner.
 - 🛡️ **Ethical Scraping**: Respects robots.txt and site policies. We may be in 2077, but we still have standards.
@@ -64,6 +65,15 @@ Check out our [YouTube video](https://www.youtube.com/watch?v=iATSd5Ijl4M) for a
 5. Set OpenAI Key in your enviornment:
    ```bash
    export OPENAI_API_KEY='your-api-key-here'
+   ```
+
+6 If you want to use the experminal Ollama Branch:
+   ```bash
+   1. git checkout ollama_experimental
+   2. Setup Ollama using `pip install ollama`
+   3. Download the Ollama from the official website: https://ollama.com/download
+   4. Now type: ollama run llama3.1 or whatever LLM you want to use.
+   5. Now follow the rest of the steps below.
    ```
 
 ## 🚀 Usage

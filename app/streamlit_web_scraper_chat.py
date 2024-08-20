@@ -1,8 +1,9 @@
 import asyncio
+import streamlit as st
 from src.web_extractor import WebExtractor
 
 class StreamlitWebScraperChat:
-    def __init__(self, model_name: str = "gpt-4o-mini"):
+    def __init__(self, model_name):
         self.web_extractor = WebExtractor(model_name=model_name)
 
     def process_message(self, message: str) -> str:

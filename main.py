@@ -1,15 +1,28 @@
 import streamlit as st
 import json
+import asyncio
+import logging
 from app.streamlit_web_scraper_chat import StreamlitWebScraperChat
 from app.ui_components import display_info_icons, display_message
 from app.utils import loading_animation, get_loading_message
 from datetime import datetime, timedelta
+from src.ollama_models import OllamaModel
+import pandas as pd
 
 def safe_process_message(web_scraper_chat, message):
     if message is None or message.strip() == "":
         return "I'm sorry, but I didn't receive any input. Could you please try again?"
     try:
-        return web_scraper_chat.process_message(message)
+        response = web_scraper_chat.process_message(message)
+        if isinstance(response, tuple) and len(response) == 2 and isinstance(response[1], pd.DataFrame):
+            # This is a CSV response
+            csv_string, df = response
+            st.text("CSV Data:")
+            st.code(csv_string, language="csv")
+            st.text("Interactive Table:")
+            st.dataframe(df)
+            return csv_string  # Return only the string part for chat history
+        return response
     except AttributeError as e:
         if "'NoneType' object has no attribute 'lower'" in str(e):
             return "I encountered an issue while processing your request. It seems like I received an unexpected empty value. Could you please try rephrasing your input?"
@@ -48,12 +61,36 @@ def get_last_url_from_chat(messages):
     return None
 
 def initialize_web_scraper_chat(url=None):
-    web_scraper_chat = StreamlitWebScraperChat(model_name=st.session_state.selected_model)
+    if st.session_state.selected_model.startswith("ollama:"):
+        model = OllamaModel(st.session_state.selected_model[7:])
+    else:
+        model = st.session_state.selected_model
+    web_scraper_chat = StreamlitWebScraperChat(model_name=model)
+    if url:
+        web_scraper_chat.process_message(url)
+    return web_scraper_chat
+
+async def list_ollama_models():
+    try:
+        return await OllamaModel.list_models()
+    except Exception as e:
+        st.error(f"Error fetching Ollama models: {str(e)}")
+        return []
+
+def initialize_web_scraper_chat(url=None):
+    model_name = st.session_state.selected_model
+    web_scraper_chat = StreamlitWebScraperChat(model_name=model_name)
     if url:
         web_scraper_chat.process_message(url)
     return web_scraper_chat
 
 def main():
+    # Set up logging
+    logging.basicConfig(level=logging.DEBUG, format='%(asctime)s - %(name)s - %(levelname)s - %(message)s')
+    logger = logging.getLogger(__name__)
+    logger.debug("Starting CyberScraper 2077")
+
+    # Set page config at the very beginning
     st.set_page_config(page_title="CyberScraper 2077", page_icon="🌐", layout="wide")
 
     hide_streamlit_style = """
@@ -157,6 +194,25 @@ def main():
 
     with st.sidebar:
         st.title("Conversation History")
+
+        # Model selection
+        st.subheader("Select Model")
+        default_models = ["gpt-4o-mini", "gpt-3.5-turbo"]
+        ollama_models = st.session_state.get('ollama_models', [])
+        all_models = default_models + [f"ollama:{model}" for model in ollama_models]
+        selected_model = st.selectbox("Choose a model", all_models, index=all_models.index(st.session_state.selected_model) if st.session_state.selected_model in all_models else 0)
+        
+        if selected_model != st.session_state.selected_model:
+            st.session_state.selected_model = selected_model
+            st.session_state.web_scraper_chat = None
+            st.rerun()
+
+        if st.button("Refresh Ollama Models"):
+            with st.spinner("Fetching Ollama models..."):
+                st.session_state.ollama_models = asyncio.run(list_ollama_models())
+            st.success(f"Found {len(st.session_state.ollama_models)} Ollama models")
+            st.rerun()
+
         if st.button("+ 🗨️ New Chat", key="new_chat", use_container_width=True):
             new_chat_id = str(datetime.now().timestamp())
             st.session_state.chat_history[new_chat_id] = {
@@ -237,23 +293,28 @@ def main():
     prompt = st.chat_input("Enter the URL to scrape or ask a question regarding the data", key="user_input")
 
     if prompt:
+        logger.debug(f"Received prompt: {prompt}")
         st.session_state.chat_history[st.session_state.current_chat_id]["messages"].append({"role": "user", "content": prompt})
         save_chat_history(st.session_state.chat_history)
         
         if not st.session_state.web_scraper_chat:
+            logger.debug("Initializing web_scraper_chat")
             st.session_state.web_scraper_chat = initialize_web_scraper_chat()
 
         with st.chat_message("assistant"):
             try:
+                logger.debug("Processing message with web_scraper_chat")
                 full_response = loading_animation(
                     safe_process_message,
                     st.session_state.web_scraper_chat,
                     prompt
                 )
+                logger.debug(f"Received response (first 500 chars): {str(full_response)[:500]}...")
                 if full_response is not None:
-                    st.session_state.chat_history[st.session_state.current_chat_id]["messages"].append({"role": "assistant", "content": full_response})
+                    st.session_state.chat_history[st.session_state.current_chat_id]["messages"].append({"role": "assistant", "content": str(full_response)})
                     save_chat_history(st.session_state.chat_history)
             except Exception as e:
+                logger.error(f"An unexpected error occurred: {str(e)}")
                 st.error(f"An unexpected error occurred: {str(e)}")
         
         st.rerun()

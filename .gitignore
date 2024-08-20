@@ -1,0 +1,69 @@
+# Python cache files
+__pycache__/
+*.py[cod]
+*$py.class
+
+# Virtual environment
+venv/
+
+# Streamlit cache
+.streamlit/
+
+# PyCharm files
+.idea/
+
+# VS Code files
+.vscode/
+
+# Jupyter Notebook
+.ipynb_checkpoints
+
+# Environment variables
+.env
+
+# Operating system files
+.DS_Store
+Thumbs.db
+
+# Log files
+*.log
+
+# Database files
+*.db
+*.sqlite3
+
+# Chat history (if you don't want to version control it)
+chat_history.json
+
+# Compiled Python files
+*.pyc
+
+# Package directories
+dist/
+build/
+*.egg-info/
+
+# Backup files
+*~
+*.bak
+
+# Coverage reports
+htmlcov/
+.coverage
+.coverage.*
+coverage.xml
+
+# Pytest cache
+.pytest_cache/
+
+# mypy cache
+.mypy_cache/
+
+# Scrapy stuff:
+.scrapy
+
+# Sphinx documentation
+docs/_build/
+
+# PyBuilder
+target/

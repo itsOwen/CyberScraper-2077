@@ -72,13 +72,14 @@ Check out our [YouTube video](https://www.youtube.com/watch?v=iATSd5Ijl4M) for a
    ```bash
    set OPENAI_API_KEY="your-api-key-here"
    ```
-6. If you want to use the experminal Ollama Branch:
+6. If you want to use the Ollama:
+
+Note: I only recommend using OpenAI API as GPT4o-mini is really good at following instructions, If you are using open-source LLMs make sure you have a good system as the speed of the data generation/presentation depends on how good your system is in running the LLM and also you may have to fine-tune the prompt and add some additional filters yourself.
    ```bash
-   1. git checkout ollama_experimental
-   2. Setup Ollama using `pip install ollama`
-   3. Download the Ollama from the official website: https://ollama.com/download
-   4. Now type: ollama run llama3.1 or whatever LLM you want to use.
-   5. Now follow the rest of the steps below.
+   1. Setup Ollama using `pip install ollama`
+   2. Download the Ollama from the official website: https://ollama.com/download
+   3. Now type: ollama pull llama3.1 or whatever LLM you want to use.
+   4. Now follow the rest of the steps below.
    ```
 
 ## 🚀 Usage
@@ -95,6 +96,20 @@ Check out our [YouTube video](https://www.youtube.com/watch?v=iATSd5Ijl4M) for a
 4. Ask the chatbot to extract the data in any format, Select whatever data you want to export or even everything from the webpage.
 
 4. Watch as CyberScraper 2077 tears through the net, extracting your data faster than you can say "flatline"!
+
+## Adjusting PlaywrightScraper Settings (optional)
+
+Customize the `PlaywrightScraper` settings to fit your scraping needs:
+
+- **Browser Launch Options**: Modify `headless` mode and `args` in `launch_browser` to control browser visibility and behavior.
+- **Browser Context**: Adjust viewport size and `user_agent` in `create_context` to suit your scraping requirements.
+- **Page Features**: Update HTTP headers and `navigator.webdriver` in `set_browser_features` for better mimicry of real users.
+- **Cloudflare Bypass**: Configure retry attempts and delays in `bypass_cloudflare` to handle Cloudflare protections.
+- **Human Behavior Simulation**: Customize scrolling and mouse movements in `simulate_human_behavior` to simulate realistic user interactions.
+
+So you can disable or remove the Human Behaviour simulation option as it currently mimics human behaviour, stuff like scrolling and more to prevent it from getting blocked. So it does take a few extra seconds when you send the link at the start which slows the process a little bit.
+
+Adjust these settings based on your target website and environment for optimal results.
 
 ## 🤝 Contributing
 

@@ -63,8 +63,14 @@ Check out our [YouTube video](https://www.youtube.com/watch?v=iATSd5Ijl4M) for a
    ```
 
 5. Set OpenAI Key in your enviornment:
+
+   Linux/Mac:
    ```bash
    export OPENAI_API_KEY='your-api-key-here'
+   ```
+   For Windows:
+   ```bash
+   set OPENAI_API_KEY="your-api-key-here"
    ```
 
 6 If you want to use the experminal Ollama Branch:

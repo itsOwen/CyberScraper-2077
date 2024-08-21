@@ -42,7 +42,14 @@ Whether you're a corpo data analyst, a street-smart netrunner, or just someone l
 
 Check out our [YouTube video](https://www.youtube.com/watch?v=iATSd5Ijl4M) for a full walkthrough of CyberScraper 2077's capabilities.
 
-### Note tested only on Mac and Linux
+## 🪟 For Windows Users (hotfix)
+
+You may encounter issues while using the Windows version as I ported it in a few minutes.
+
+**Steps to follow:**
+  
+1. First type: ```git checkout windows-hotfix```
+2. Then Follow the same steps as below.
 
 ## 🛠 Installation
 
@@ -76,7 +83,7 @@ Check out our [YouTube video](https://www.youtube.com/watch?v=iATSd5Ijl4M) for a
    ```
    For Windows:
    ```bash
-   set OPENAI_API_KEY="your-api-key-here"
+   set OPENAI_API_KEY=your-api-key-here
    ```
 6. If you want to use the Ollama:
 

@@ -5,7 +5,7 @@
 </p>
 
 <p align="center">
-  <img src="https://i.postimg.cc/xChxGLcL/Cyber-Scraper.jpg">
+  <img src="https://i.postimg.cc/t4md4ztv/cyberscraper-2077.jpg">
 </p>
 
 [![Python](https://img.shields.io/badge/Python-blue)](https://www.python.org/downloads/)

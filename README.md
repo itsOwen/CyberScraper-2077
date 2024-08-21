@@ -42,6 +42,8 @@ Whether you're a corpo data analyst, a street-smart netrunner, or just someone l
 
 Check out our [YouTube video](https://www.youtube.com/watch?v=iATSd5Ijl4M) for a full walkthrough of CyberScraper 2077's capabilities.
 
+### Note tested only on Mac and Linux
+
 ## 🛠 Installation
 
 1. Clone this repository:

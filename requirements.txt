@@ -16,3 +16,4 @@ python-dotenv
 watchdog
 playwright_stealth
 ollama
+setuptools

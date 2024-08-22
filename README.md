@@ -96,6 +96,60 @@ Note: I only recommend using OpenAI API as GPT4o-mini is really good at followin
    4. Now follow the rest of the steps below.
    ```
 
+## 🐳 Docker Installation
+
+If you prefer to use Docker, follow these steps to set up and run CyberScraper 2077:
+
+1. Ensure you have Docker installed on your system.
+
+2. Clone this repository:
+   ```bash
+   git clone https://github.com/itsOwen/CyberScraper-2077.git
+   cd CyberScraper-2077
+   ```
+
+3. Build the Docker image:
+   ```bash
+   docker build -t cyberscraper-2077 .
+   ```
+
+4. Run the container:
+   - Without OpenAI API key:
+     ```bash
+     docker run -p 8501:8501 cyberscraper-2077
+     ```
+   - With OpenAI API key:
+     ```bash
+     docker run -p 8501:8501 -e OPENAI_API_KEY='your-actual-api-key' cyberscraper-2077
+     ```
+
+5. Open your browser and navigate to `http://localhost:8501`.
+
+### Using Ollama with Docker
+
+If you want to use Ollama with the Docker setup:
+
+1. Install Ollama on your host machine following the instructions at https://ollama.com/download
+
+2. Run Ollama on your host machine:
+   ```bash
+   ollama run llama2
+   ```
+
+3. Find your host machine's IP address:
+   - On Linux/Mac: `ifconfig` or `ip addr show`
+   - On Windows: `ipconfig`
+
+4. Run the Docker container with the host network and set the Ollama URL:
+   ```bash
+   docker run --network host -e OLLAMA_BASE_URL=http://<your-host-ip>:11434 -p 8501:8501 cyberscraper-2077
+   ```
+   Replace `<your-host-ip>` with your actual host machine IP address.
+
+5. In the Streamlit interface, select the Ollama model you want to use (e.g., "ollama:llama2").
+
+Note: Ensure that your firewall allows connections to port 11434 for Ollama.
+
 ## 🚀 Usage
 
 1. Fire up the Streamlit app:

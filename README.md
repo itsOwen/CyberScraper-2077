@@ -43,14 +43,9 @@ Whether you're a corpo data analyst, a street-smart netrunner, or just someone l
 
 Check out our [YouTube video](https://www.youtube.com/watch?v=iATSd5Ijl4M) for a full walkthrough of CyberScraper 2077's capabilities.
 
-## 🪟 For Windows Users (hotfix)
+## 🪟 For Windows Users
 
-You may encounter issues while using the Windows version as I ported it in a few minutes.
-
-**Steps to follow:**
-  
-1. First type: ```git checkout windows-hotfix```
-2. Then Follow the same steps as below.
+Please follow the Docker Container Guide given below, As I won't be able to maintain another version for windows system.
 
 ## 🛠 Installation
 
@@ -167,15 +162,15 @@ Note: Ensure that your firewall allows connections to port 11434 for Ollama.
 
 ## Adjusting PlaywrightScraper Settings (optional)
 
-Customize the `PlaywrightScraper` settings to fit your scraping needs:
+Customize the `PlaywrightScraper` settings to fit your scraping needs, If some websites are giving you issues, You might want to check the behaviour of the website:
 
-- **Browser Launch Options**: Modify `headless` mode and `args` in `launch_browser` to control browser visibility and behavior.
-- **Browser Context**: Adjust viewport size and `user_agent` in `create_context` to suit your scraping requirements.
-- **Page Features**: Update HTTP headers and `navigator.webdriver` in `set_browser_features` for better mimicry of real users.
-- **Cloudflare Bypass**: Configure retry attempts and delays in `bypass_cloudflare` to handle Cloudflare protections.
-- **Human Behavior Simulation**: Customize scrolling and mouse movements in `simulate_human_behavior` to simulate realistic user interactions.
-
-So you can disable or remove the Human Behaviour simulation option as it currently mimics human behaviour, stuff like scrolling and more to prevent it from getting blocked. So it does take a few extra seconds when you send the link at the start which slows the process a little bit.
+```bash
+use_stealth: bool = True,
+simulate_human: bool = False,
+use_custom_headers: bool = True,
+hide_webdriver: bool = True,
+bypass_cloudflare: bool = True:
+```
 
 Adjust these settings based on your target website and environment for optimal results.
 

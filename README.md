@@ -35,6 +35,7 @@ Whether you're a corpo data analyst, a street-smart netrunner, or just someone l
 - 🚀 **Async Operations**: Lightning-fast scraping that would make a Trauma Team jealous.
 - 🧠 **Smart Parsing**: Structures scraped content as if it was extracted straight from the engram of a master netrunner.
 - 🛡️ **Ethical Scraping**: Respects robots.txt and site policies. We may be in 2077, but we still have standards.
+- 📄 **Caching**: We implemented content-based and query-based caching using LRU cache and a custom dictionary to reduce redundant API calls.
 - 🌐 **Proxy Mode (Coming Soon)**: Built-in proxy support to keep you ghosting through the net.
 - 🛡️ **Navigate through the Pages (Coming Soon)**: Navigate through the webpage and scrap the data from different pages. 
 

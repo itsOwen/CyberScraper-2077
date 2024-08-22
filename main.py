@@ -15,13 +15,12 @@ def safe_process_message(web_scraper_chat, message):
     try:
         response = web_scraper_chat.process_message(message)
         if isinstance(response, tuple) and len(response) == 2 and isinstance(response[1], pd.DataFrame):
-            # This is a CSV response
             csv_string, df = response
             st.text("CSV Data:")
             st.code(csv_string, language="csv")
             st.text("Interactive Table:")
             st.dataframe(df)
-            return csv_string  # Return only the string part for chat history
+            return csv_string
         return response
     except AttributeError as e:
         if "'NoneType' object has no attribute 'lower'" in str(e):
@@ -77,21 +76,22 @@ async def list_ollama_models():
         st.error(f"Error fetching Ollama models: {str(e)}")
         return []
 
-def initialize_web_scraper_chat(url=None):
-    model_name = st.session_state.selected_model
-    web_scraper_chat = StreamlitWebScraperChat(model_name=model_name)
-    if url:
-        web_scraper_chat.process_message(url)
-    return web_scraper_chat
+def setup_logging(enable_logging):
+    if enable_logging:
+        logging.basicConfig(level=logging.DEBUG, format='%(asctime)s - %(name)s - %(levelname)s - %(message)s')
+        return logging.getLogger(__name__)
+    else:
+        return logging.getLogger(__name__)
 
 def main():
-    # Set up logging
-    logging.basicConfig(level=logging.DEBUG, format='%(asctime)s - %(name)s - %(levelname)s - %(message)s')
-    logger = logging.getLogger(__name__)
-    logger.debug("Starting CyberScraper 2077")
 
-    # Set page config at the very beginning
     st.set_page_config(page_title="CyberScraper 2077", page_icon="🌐", layout="wide")
+
+    if 'enable_logging' not in st.session_state:
+        st.session_state.enable_logging = False
+
+    logger = setup_logging(st.session_state.enable_logging)
+    logger.debug("Starting CyberScraper 2077")
 
     hide_streamlit_style = """
         <style>
@@ -173,7 +173,6 @@ def main():
     </style>
     """, unsafe_allow_html=True)
 
-    # Initialize session state
     if 'chat_history' not in st.session_state:
         st.session_state.chat_history = load_chat_history()
     if 'current_chat_id' not in st.session_state or st.session_state.current_chat_id not in st.session_state.chat_history:
@@ -194,6 +193,12 @@ def main():
 
     with st.sidebar:
         st.title("Conversation History")
+
+        st.session_state.enable_logging = st.toggle("Enable Logging", st.session_state.enable_logging)
+        if st.session_state.enable_logging:
+            st.info("Logging is enabled. Check your console for log messages.")
+        else:
+            st.info("Logging is disabled.")
 
         # Model selection
         st.subheader("Select Model")
@@ -293,28 +298,33 @@ def main():
     prompt = st.chat_input("Enter the URL to scrape or ask a question regarding the data", key="user_input")
 
     if prompt:
-        logger.debug(f"Received prompt: {prompt}")
+        if st.session_state.enable_logging:
+            logger.debug(f"Received prompt: {prompt}")
         st.session_state.chat_history[st.session_state.current_chat_id]["messages"].append({"role": "user", "content": prompt})
         save_chat_history(st.session_state.chat_history)
         
         if not st.session_state.web_scraper_chat:
-            logger.debug("Initializing web_scraper_chat")
+            if st.session_state.enable_logging:
+                logger.debug("Initializing web_scraper_chat")
             st.session_state.web_scraper_chat = initialize_web_scraper_chat()
 
         with st.chat_message("assistant"):
             try:
-                logger.debug("Processing message with web_scraper_chat")
+                if st.session_state.enable_logging:
+                    logger.debug("Processing message with web_scraper_chat")
                 full_response = loading_animation(
                     safe_process_message,
                     st.session_state.web_scraper_chat,
                     prompt
                 )
-                logger.debug(f"Received response (first 500 chars): {str(full_response)[:500]}...")
+                if st.session_state.enable_logging:
+                    logger.debug(f"Received response (first 500 chars): {str(full_response)[:500]}...")
                 if full_response is not None:
                     st.session_state.chat_history[st.session_state.current_chat_id]["messages"].append({"role": "assistant", "content": str(full_response)})
                     save_chat_history(st.session_state.chat_history)
             except Exception as e:
-                logger.error(f"An unexpected error occurred: {str(e)}")
+                if st.session_state.enable_logging:
+                    logger.error(f"An unexpected error occurred: {str(e)}")
                 st.error(f"An unexpected error occurred: {str(e)}")
         
         st.rerun()

@@ -14,38 +14,6 @@ def display_info_icons():
     if st.session_state.info_icons_displayed:
         st.markdown(
             """
-            <style>
-                .info-box {
-                    background-color: #e6f3ff;
-                    padding: 20px;
-                    border-radius: 5px;
-                    text-align: center;
-                    flex: 1;
-                    min-width: 150px;
-                    display: flex;
-                    flex-direction: column;
-                    align-items: center;
-                    justify-content: center;
-                }
-                .info-box h3 {
-                    margin: 0;
-                }
-                @media (max-width: 768px) {
-                    .info-box {
-                        min-width: 100px;
-                        font-size: 12px;
-                        padding: 10px;
-                    }
-                    .info-box p {
-                        font-size: 10px;
-                        margin: 0;
-                    }
-                }
-                .info-box[data-type="enter-url"] { background-color: #e6f3ff; }
-                .info-box[data-type="specify-data"] { background-color: #fff2e6; }
-                .info-box[data-type="save-data"] { background-color: #e6ffe6; }
-                .info-box[data-type="convert-data"] { background-color: #ffe6e6; }
-            </style>
             <div style="display: flex; justify-content: center; align-items: center; flex-direction: column; gap: 10px; padding: 20px;">
                 <div style="display: flex; justify-content: center; gap: 10px; flex-wrap: wrap; max-width: 800px;">
                     <div class="info-box" data-type="enter-url">

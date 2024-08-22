@@ -8,6 +8,7 @@ from app.utils import loading_animation, get_loading_message
 from datetime import datetime, timedelta
 from src.ollama_models import OllamaModel
 import pandas as pd
+import base64
 
 def safe_process_message(web_scraper_chat, message):
     if message is None or message.strip() == "":
@@ -83,95 +84,41 @@ def setup_logging(enable_logging):
     else:
         return logging.getLogger(__name__)
 
+def load_css():
+    with open("app/styles.css", "r") as f:
+        st.markdown(f"<style>{f.read()}</style>", unsafe_allow_html=True)
+
+def get_image_base64(image_path):
+    with open(image_path, "rb") as image_file:
+        return base64.b64encode(image_file.read()).decode()
+
+def render_message(role, content, avatar_path):
+    message_class = "user-message" if role == "user" else "assistant-message"
+    avatar_base64 = get_image_base64(avatar_path)
+    return f"""
+    <div class="chat-message {message_class}">
+        <div class="avatar">
+            <img src="data:image/png;base64,{avatar_base64}" alt="{role} avatar">
+        </div>
+        <div class="message-content">{content}</div>
+    </div>
+    """
+
 def main():
 
     st.set_page_config(page_title="CyberScraper 2077", page_icon="🌐", layout="wide")
+
+    load_css()
+
+    # avatar paths
+    user_avatar_path = "app/icons/man.png"
+    ai_avatar_path = "app/icons/skull.png"
 
     if 'enable_logging' not in st.session_state:
         st.session_state.enable_logging = False
 
     logger = setup_logging(st.session_state.enable_logging)
     logger.debug("Starting CyberScraper 2077")
-
-    hide_streamlit_style = """
-        <style>
-            header {visibility: hidden;}
-            .streamlit-footer {display: none;}
-            .st-emotion-cache-uf99v8 {display: none;}
-        </style>
-    """
-    st.markdown(hide_streamlit_style, unsafe_allow_html=True)
-
-    st.markdown("""
-    <style>
-    .stSidebar {
-        background-color: #f0f2f6;
-        padding: 1rem;
-    }
-    .stSidebar .sidebar-content {
-        padding: 0;
-    }
-    .sidebar-chat-button {
-        background-color: #ffffff;
-        color: #333333;
-        border: 1px solid #e0e0e0;
-        border-radius: 5px;
-        padding: 0.5rem;
-        margin-bottom: 0.5rem;
-        text-align: left;
-        overflow: hidden;
-        text-overflow: ellipsis;
-        white-space: nowrap;
-        display: flex;
-        align-items: center;
-        justify-content: space-between;
-    }
-    .sidebar-chat-button:hover {
-        background-color: #f0f0f0;
-    }
-    .chat-message {
-        padding: 1.5rem;
-        border-radius: 0.5rem;
-        margin-bottom: 1rem;
-        display: flex;
-        align-items: flex-start;
-    }
-    .chat-message.user {
-        background-color: #f0f2f6;
-    }
-    .chat-message.bot {
-        background-color: #ffffff;
-        border: 1px solid #e0e0e0;
-    }
-    .chat-message .avatar {
-        width: 30px;
-        height: 30px;
-        border-radius: 2px;
-        object-fit: cover;
-        margin-right: 1rem;
-    }
-    .chat-message .message {
-        flex-grow: 1;
-        color: #333333;
-    }
-    .date-group {
-        color: #666666;
-        font-size: 0.8rem;
-        margin-top: 1rem;
-        margin-bottom: 0.5rem;
-    }
-    .delete-button {
-        color: #666666;
-        background: none;
-        border: none;
-        cursor: pointer;
-        margin-left: 0.5rem;
-    }
-    .delete-button:hover {
-        color: #333333;
-    }
-    </style>
-    """, unsafe_allow_html=True)
 
     if 'chat_history' not in st.session_state:
         st.session_state.chat_history = load_chat_history()
@@ -291,9 +238,15 @@ def main():
     chat_container = st.container()
 
     with chat_container:
+        st.markdown('<div class="chat-container">', unsafe_allow_html=True)
         for message in st.session_state.chat_history[st.session_state.current_chat_id]["messages"]:
-            with st.chat_message(message["role"]):
-                display_message(message)
+            if message["role"] == "user":
+                st.markdown(render_message("user", message["content"], user_avatar_path), unsafe_allow_html=True)
+            else:
+                with st.container():
+                    st.markdown(render_message("assistant", "", ai_avatar_path), unsafe_allow_html=True)
+                    display_message(message)
+        st.markdown('</div>', unsafe_allow_html=True)
 
     prompt = st.chat_input("Enter the URL to scrape or ask a question regarding the data", key="user_input")
 
@@ -310,24 +263,20 @@ def main():
 
         with st.chat_message("assistant"):
             try:
-                if st.session_state.enable_logging:
-                    logger.debug("Processing message with web_scraper_chat")
                 full_response = loading_animation(
                     safe_process_message,
                     st.session_state.web_scraper_chat,
                     prompt
                 )
-                if st.session_state.enable_logging:
-                    logger.debug(f"Received response (first 500 chars): {str(full_response)[:500]}...")
                 if full_response is not None:
-                    st.session_state.chat_history[st.session_state.current_chat_id]["messages"].append({"role": "assistant", "content": str(full_response)})
+                    st.session_state.chat_history[st.session_state.current_chat_id]["messages"].append({"role": "assistant", "content": full_response})
                     save_chat_history(st.session_state.chat_history)
             except Exception as e:
                 if st.session_state.enable_logging:
                     logger.error(f"An unexpected error occurred: {str(e)}")
                 st.error(f"An unexpected error occurred: {str(e)}")
-        
-        st.rerun()
+            
+            st.rerun()
 
     st.markdown(
         """

@@ -107,9 +107,12 @@ header {
     margin-left: auto;
 }
 
-.assistant-message .message-content {
-    background-color: #ffffff;
-    margin-right: auto;
+body {
+    background-color: var(--page-bg-light);
+}
+
+body.dark-mode {
+    background-color: var(--page-bg-dark);
 }
 
 .avatar {

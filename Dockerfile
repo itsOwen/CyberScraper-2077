@@ -1,14 +1,13 @@
-# Change python image if you want
+# Use the specified Python image
 FROM python:3.8.19-slim-bullseye
 
-# working dir
+# Set the working directory in the container
 WORKDIR /app
 
-# dependencies
+# Install system dependencies
 RUN apt-get update && apt-get install -y \
     wget \
     gnupg \
-    git \
     && apt-get clean \
     && rm -rf /var/lib/apt/lists/*
 
@@ -23,14 +22,14 @@ ENV PATH="/app/venv/bin:$PATH"
 RUN pip install --no-cache-dir -r requirements.txt
 
 # Install playwright and its browser
-RUN pip install playwright
+RUN pip install playwright requests
 RUN playwright install chromium
 RUN playwright install-deps
 
 # Expose port 8501 for Streamlit
 EXPOSE 8501
 
-# a simple shell script to run the app
+# Create a shell script to run the application
 RUN echo '#!/bin/bash\n\
 if [ ! -z "$OPENAI_API_KEY" ]; then\n\
     export OPENAI_API_KEY=$OPENAI_API_KEY\n\
@@ -40,4 +39,5 @@ streamlit run main.py\n\
 
 RUN chmod +x /app/run.sh
 
+# Set the entrypoint to the shell script
 ENTRYPOINT ["/app/run.sh"]

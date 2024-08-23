@@ -36,6 +36,7 @@ Whether you're a corpo data analyst, a street-smart netrunner, or just someone l
 - 🧠 **Smart Parsing**: Structures scraped content as if it was extracted straight from the engram of a master netrunner.
 - 🛡️ **Ethical Scraping**: Respects robots.txt and site policies. We may be in 2077, but we still have standards.
 - 📄 **Caching**: We implemented content-based and query-based caching using LRU cache and a custom dictionary to reduce redundant API calls.
+- ✅ **Upload to Google Sheets**: Now you can easily upload your extract csv data to google sheets with one click.
 - 🌐 **Proxy Mode (Coming Soon)**: Built-in proxy support to keep you ghosting through the net.
 - 🛡️ **Navigate through the Pages (Coming Soon)**: Navigate through the webpage and scrap the data from different pages. 
 
@@ -128,7 +129,7 @@ If you want to use Ollama with the Docker setup:
 
 2. Run Ollama on your host machine:
    ```bash
-   ollama run llama2
+   ollama pull llama3.1
    ```
 
 3. Find your host machine's IP address:
@@ -137,11 +138,15 @@ If you want to use Ollama with the Docker setup:
 
 4. Run the Docker container with the host network and set the Ollama URL:
    ```bash
-   docker run --network host -e OLLAMA_BASE_URL=http://<your-host-ip>:11434 -p 8501:8501 cyberscraper-2077
+   docker run -e OLLAMA_BASE_URL=http://host.docker.internal:11434 -p 8501:8501 cyberscraper-2077
+   ```
+   On Linux you might need to use this below:
+   ```bash
+   docker run -e OLLAMA_BASE_URL=http://<your-host-ip>:11434 -p 8501:8501 cyberscraper-2077
    ```
    Replace `<your-host-ip>` with your actual host machine IP address.
 
-5. In the Streamlit interface, select the Ollama model you want to use (e.g., "ollama:llama2").
+5. In the Streamlit interface, select the Ollama model you want to use (e.g., "ollama:llama3.1").
 
 Note: Ensure that your firewall allows connections to port 11434 for Ollama.
 
@@ -159,6 +164,28 @@ Note: Ensure that your firewall allows connections to port 11434 for Ollama.
 4. Ask the chatbot to extract the data in any format, Select whatever data you want to export or even everything from the webpage.
 
 4. Watch as CyberScraper 2077 tears through the net, extracting your data faster than you can say "flatline"!
+
+## Setup Google Sheets Authentication:
+
+1. Go to the Google Cloud Console (https://console.cloud.google.com/).
+2. Select your project.
+3. Navigate to "APIs & Services" > "Credentials".
+4. Find your existing OAuth 2.0 Client ID and delete it.
+5. Click "Create Credentials" > "OAuth client ID".
+6. Choose "Web application" as the application type.
+7. Name your client (e.g., "CyberScraper 2077 Web Client").
+8. Under "Authorized JavaScript origins", add:
+   - http://localhost:8501
+   - http://localhost:8502
+   - http://127.0.0.1:8501
+   - http://127.0.0.1:8502
+9. Under "Authorized redirect URIs", add:
+   - http://localhost:8501/
+   - http://127.0.0.1:8501/
+   - http://localhost:8502/
+   - http://127.0.0.1:8502/
+10. Click "Create" to generate the new client ID.
+11. Download the new client configuration JSON file and rename it to `client_secret.json`.
 
 ## Adjusting PlaywrightScraper Settings (optional)
 

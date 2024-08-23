@@ -18,19 +18,19 @@ def display_info_icons():
                 <div style="display: flex; justify-content: center; gap: 10px; flex-wrap: wrap; max-width: 800px;">
                     <div class="info-box" data-type="enter-url">
                         <h3 style="color: #0066cc;">💻 Enter URL</h3>
-                        <p>Fetch webpage content for extraction.</p>
+                        <p style="color: #000000;">Fetch webpage content for extraction.</p>
                     </div>
                     <div class="info-box" data-type="specify-data">
                         <h3 style="color: #cc6600;">🔍 Specify Data</h3>
-                        <p>Define what data you want to extract.</p>
+                        <p style="color: #000000;">Define what data you want to extract.</p>
                     </div>
                     <div class="info-box" data-type="save-data">
                         <h3 style="color: #006600;">💾 Save Data</h3>
-                        <p>Save in JSON, CSV, or Excel format.</p>
+                        <p style="color: #000000;">Save in JSON, CSV, or Excel format.</p>
                     </div>
                     <div class="info-box" data-type="convert-data">
                         <h3 style="color: #cc0000;">🔄 Convert Data</h3>
-                        <p>Convert between different formats.</p>
+                        <p style="color: #000000;">Convert between different formats.</p>
                     </div>
                 </div>
             </div>

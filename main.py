@@ -3,12 +3,30 @@ import json
 import asyncio
 import logging
 from app.streamlit_web_scraper_chat import StreamlitWebScraperChat
-from app.ui_components import display_info_icons, display_message
+from app.ui_components import display_info_icons, display_message, extract_data_from_markdown, format_data
 from app.utils import loading_animation, get_loading_message
 from datetime import datetime, timedelta
 from src.ollama_models import OllamaModel
 import pandas as pd
 import base64
+from google_auth_oauthlib.flow import Flow
+import io
+from src.utils.google_sheets_utils import SCOPES, get_redirect_uri, display_google_sheets_button, initiate_google_auth
+
+def handle_oauth_callback():
+    if 'code' in st.query_params:
+        try:
+            flow = Flow.from_client_secrets_file(
+                'client_secret.json',
+                scopes=SCOPES,
+                redirect_uri=get_redirect_uri()
+            )
+            flow.fetch_token(code=st.query_params['code'])
+            st.session_state['google_auth_token'] = flow.credentials.to_json()
+            st.success("Successfully authenticated with Google!")
+            st.query_params.clear()
+        except Exception as e:
+            st.error(f"Error during OAuth callback: {str(e)}")
 
 def safe_process_message(web_scraper_chat, message):
     if message is None or message.strip() == "":
@@ -104,11 +122,38 @@ def render_message(role, content, avatar_path):
     </div>
     """
 
+def display_message_with_sheets_upload(message, message_index):
+    content = message["content"]
+    if isinstance(content, (str, bytes, io.BytesIO)):
+        data = extract_data_from_markdown(content)
+        if data is not None:
+            if isinstance(data, io.BytesIO) or (isinstance(content, str) and 'excel' in content.lower()):
+                df = format_data(data, 'excel')
+            else:
+                df = format_data(data, 'csv')
+            
+            if df is not None:
+                st.dataframe(df)
+                display_google_sheets_button(df)
+            else:
+                st.warning("Failed to display data as a table. Showing raw content:")
+                st.code(content)
+        else:
+            st.markdown(content)
+    else:
+        st.markdown(str(content))
+
 def main():
 
-    st.set_page_config(page_title="CyberScraper 2077", page_icon="🌐", layout="wide")
+    st.set_page_config(
+        page_title="CyberScraper 2077",
+        page_icon="app/icons/radiation.png",
+        layout="wide"
+    )
 
     load_css()
+
+    handle_oauth_callback()
 
     # avatar paths
     user_avatar_path = "app/icons/man.png"
@@ -239,13 +284,13 @@ def main():
 
     with chat_container:
         st.markdown('<div class="chat-container">', unsafe_allow_html=True)
-        for message in st.session_state.chat_history[st.session_state.current_chat_id]["messages"]:
+        for index, message in enumerate(st.session_state.chat_history[st.session_state.current_chat_id]["messages"]):
             if message["role"] == "user":
                 st.markdown(render_message("user", message["content"], user_avatar_path), unsafe_allow_html=True)
             else:
                 with st.container():
                     st.markdown(render_message("assistant", "", ai_avatar_path), unsafe_allow_html=True)
-                    display_message(message)
+                    display_message_with_sheets_upload(message, index)
         st.markdown('</div>', unsafe_allow_html=True)
 
     prompt = st.chat_input("Enter the URL to scrape or ask a question regarding the data", key="user_input")

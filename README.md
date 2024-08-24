@@ -231,7 +231,7 @@ Got questions? Need support? Want to hire me for a gig?
 
 ## 🚨 Disclaimer
 
-Listen up, choombas! Before you jack into this code, you better understand the risks. Here's the lowdown in plain language:
+Listen up, choombas! Before you jack into this code, you better understand the risks:
 
 1. This software is provided "as is", without warranty of any kind, express or implied.
 

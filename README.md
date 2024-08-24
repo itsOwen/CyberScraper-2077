@@ -42,7 +42,9 @@ Whether you're a corpo data analyst, a street-smart netrunner, or just someone l
 
 ## 🎥 Demo
 
-Check out our [YouTube video](https://www.youtube.com/watch?v=iATSd5Ijl4M) for a full walkthrough of CyberScraper 2077's capabilities.
+Check out our Redisgned and Improved Version of CyberScraper-2077 with more functionality [YouTube video](https://www.youtube.com/watch?v=TWyensVOIvs) for a full walkthrough of CyberScraper 2077's capabilities.
+
+Check out our first build (Old Video) [YouTube video](https://www.youtube.com/watch?v=iATSd5Ijl4M)
 
 ## 🪟 For Windows Users
 

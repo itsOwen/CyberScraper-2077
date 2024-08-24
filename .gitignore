@@ -32,9 +32,6 @@ Thumbs.db
 *.db
 *.sqlite3
 
-# Chat history (if you don't want to version control it)
-chat_history.json
-
 # Compiled Python files
 *.pyc
 
@@ -67,3 +64,12 @@ docs/_build/
 
 # PyBuilder
 target/
+
+# Google Sheets authentication token
+token.json
+
+# Chat history
+chat_history.json
+
+# Google OAuth client secret
+client_secret.json

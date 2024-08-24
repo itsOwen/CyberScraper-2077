@@ -15,6 +15,7 @@ logging.basicConfig(level=logging.DEBUG)
 logger = logging.getLogger(__name__)
 
 SCOPES = ['https://www.googleapis.com/auth/spreadsheets', 'https://www.googleapis.com/auth/drive.file']
+TOKEN_FILE = 'token.json'
 
 def get_redirect_uri():
     return st.get_option("server.baseUrlPath") or "http://localhost:8501"
@@ -34,24 +35,43 @@ def initiate_google_auth():
 
 def get_google_sheets_credentials():
     creds = None
-    if 'google_auth_token' in st.session_state:
+    if os.path.exists(TOKEN_FILE):
         try:
-            creds = Credentials.from_authorized_user_info(json.loads(st.session_state['google_auth_token']), SCOPES)
-            logger.debug("Loaded credentials from session state")
+            creds = Credentials.from_authorized_user_file(TOKEN_FILE, SCOPES)
+            logger.debug("Loaded credentials from token file")
         except Exception as e:
-            logger.error(f"Error loading credentials from session state: {str(e)}")
+            logger.error(f"Error loading credentials from token file: {str(e)}")
     
     if not creds or not creds.valid:
         if creds and creds.expired and creds.refresh_token:
             try:
                 creds.refresh(Request())
                 logger.debug("Refreshed expired credentials")
-                st.session_state['google_auth_token'] = creds.to_json()
+                save_credentials(creds)
             except Exception as e:
                 logger.error(f"Error refreshing credentials: {str(e)}")
                 creds = None
+        else:
+            creds = None
+    
+    if not creds:
+        if 'google_auth_token' in st.session_state:
+            try:
+                creds = Credentials.from_authorized_user_info(json.loads(st.session_state['google_auth_token']), SCOPES)
+                logger.debug("Loaded credentials from session state")
+                save_credentials(creds)
+            except Exception as e:
+                logger.error(f"Error loading credentials from session state: {str(e)}")
     
     return creds
+
+def save_credentials(creds):
+    try:
+        with open(TOKEN_FILE, 'w') as token:
+            token.write(creds.to_json())
+        logger.debug("Saved credentials to token file")
+    except Exception as e:
+        logger.error(f"Error saving credentials to token file: {str(e)}")
 
 def upload_to_google_sheets(df):
     creds = get_google_sheets_credentials()
@@ -88,10 +108,10 @@ def upload_to_google_sheets(df):
         return None
 
 def display_google_sheets_button(df):
-    
     df_hash = hash(str(df))
 
-    if 'google_auth_token' not in st.session_state:
+    creds = get_google_sheets_credentials()
+    if not creds:
         auth_button = '🔑 Authorize Google Sheets'
         if st.button(auth_button, key=f"auth_sheets_{df_hash}", help="Authorize access to Google Sheets"):
             initiate_google_auth()

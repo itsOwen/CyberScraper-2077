@@ -4,10 +4,11 @@ FROM python:3.8.19-slim-bullseye
 # Set the working directory in the container
 WORKDIR /app
 
-# Install system dependencies
+# Install system dependencies including Git
 RUN apt-get update && apt-get install -y \
     wget \
     gnupg \
+    git \
     && apt-get clean \
     && rm -rf /var/lib/apt/lists/*
 

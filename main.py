@@ -1,7 +1,6 @@
 import streamlit as st
 import json
 import asyncio
-import logging
 from app.streamlit_web_scraper_chat import StreamlitWebScraperChat
 from app.ui_components import display_info_icons, display_message, extract_data_from_markdown, format_data
 from app.utils import loading_animation, get_loading_message
@@ -11,6 +10,8 @@ import pandas as pd
 import base64
 from google_auth_oauthlib.flow import Flow
 import io
+from io import BytesIO
+import re
 from src.utils.google_sheets_utils import SCOPES, get_redirect_uri, display_google_sheets_button, initiate_google_auth
 
 def handle_oauth_callback():
@@ -28,18 +29,88 @@ def handle_oauth_callback():
         except Exception as e:
             st.error(f"Error during OAuth callback: {str(e)}")
 
+def serialize_bytesio(obj):
+    if isinstance(obj, BytesIO):
+        return {
+            "_type": "BytesIO",
+            "data": base64.b64encode(obj.getvalue()).decode('utf-8')
+        }
+    raise TypeError(f"Object of type {obj.__class__.__name__} is not JSON serializable")
+
+def deserialize_bytesio(obj):
+    if isinstance(obj, dict) and "_type" in obj and obj["_type"] == "BytesIO":
+        return BytesIO(base64.b64decode(obj["data"]))
+    return obj
+
+def save_chat_history(chat_history):
+    with open("chat_history.json", "w") as f:
+        json.dump(chat_history, f, default=serialize_bytesio)
+
+def load_chat_history():
+    try:
+        with open("chat_history.json", "r") as f:
+            return json.load(f, object_hook=deserialize_bytesio)
+    except FileNotFoundError:
+        return {}
+
 def safe_process_message(web_scraper_chat, message):
     if message is None or message.strip() == "":
         return "I'm sorry, but I didn't receive any input. Could you please try again?"
     try:
         response = web_scraper_chat.process_message(message)
-        if isinstance(response, tuple) and len(response) == 2 and isinstance(response[1], pd.DataFrame):
-            csv_string, df = response
-            st.text("CSV Data:")
-            st.code(csv_string, language="csv")
-            st.text("Interactive Table:")
-            st.dataframe(df)
-            return csv_string
+        st.write("Debug: Response type:", type(response))
+        
+        if isinstance(response, tuple):
+            st.write("Debug: Response is a tuple")
+            if len(response) == 2 and isinstance(response[1], pd.DataFrame):
+                st.write("Debug: CSV data detected")
+                csv_string, df = response
+                st.text("CSV Data:")
+                st.code(csv_string, language="csv")
+                st.text("Interactive Table:")
+                st.dataframe(df)
+                
+                csv_buffer = BytesIO()
+                df.to_csv(csv_buffer, index=False)
+                csv_buffer.seek(0)
+                st.download_button(
+                    label="Download CSV",
+                    data=csv_buffer,
+                    file_name="data.csv",
+                    mime="text/csv"
+                )
+                
+                return csv_string
+            elif len(response) == 2 and isinstance(response[0], BytesIO):
+                st.write("Debug: Excel data detected")
+                excel_buffer, df = response
+                st.text("Excel Data:")
+                st.dataframe(df)
+                
+                excel_buffer.seek(0)
+                st.download_button(
+                    label="Download Original Excel file",
+                    data=excel_buffer,
+                    file_name="data_original.xlsx",
+                    mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+                )
+                
+                excel_data = BytesIO()
+                with pd.ExcelWriter(excel_data, engine='xlsxwriter') as writer:
+                    df.to_excel(writer, index=False, sheet_name='Sheet1')
+                excel_data.seek(0)
+                
+                st.download_button(
+                    label="Download Excel (from DataFrame)",
+                    data=excel_data,
+                    file_name="data_from_df.xlsx",
+                    mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+                )
+                
+                return ("Excel data displayed and available for download.", excel_buffer)
+        else:
+            st.write("Debug: Response is not a tuple")
+        
         return response
     except AttributeError as e:
         if "'NoneType' object has no attribute 'lower'" in str(e):
@@ -47,18 +118,8 @@ def safe_process_message(web_scraper_chat, message):
         else:
             raise e
     except Exception as e:
+        st.write("Debug: Exception occurred:", str(e))
         return f"An unexpected error occurred: {str(e)}. Please try again or contact support if the issue persists."
-
-def load_chat_history():
-    try:
-        with open("chat_history.json", "r") as f:
-            return json.load(f)
-    except FileNotFoundError:
-        return {}
-
-def save_chat_history(chat_history):
-    with open("chat_history.json", "w") as f:
-        json.dump(chat_history, f)
 
 def get_date_group(date_str):
     date = datetime.strptime(date_str, "%Y-%m-%d")
@@ -95,13 +156,6 @@ async def list_ollama_models():
         st.error(f"Error fetching Ollama models: {str(e)}")
         return []
 
-def setup_logging(enable_logging):
-    if enable_logging:
-        logging.basicConfig(level=logging.DEBUG, format='%(asctime)s - %(name)s - %(levelname)s - %(message)s')
-        return logging.getLogger(__name__)
-    else:
-        return logging.getLogger(__name__)
-
 def load_css():
     with open("app/styles.css", "r") as f:
         st.markdown(f"<style>{f.read()}</style>", unsafe_allow_html=True)
@@ -124,19 +178,49 @@ def render_message(role, content, avatar_path):
 
 def display_message_with_sheets_upload(message, message_index):
     content = message["content"]
-    if isinstance(content, (str, bytes, io.BytesIO)):
+    if isinstance(content, (str, bytes, BytesIO)):
         data = extract_data_from_markdown(content)
         if data is not None:
-            if isinstance(data, io.BytesIO) or (isinstance(content, str) and 'excel' in content.lower()):
-                df = format_data(data, 'excel')
-            else:
-                df = format_data(data, 'csv')
-            
-            if df is not None:
-                st.dataframe(df)
-                display_google_sheets_button(df)
-            else:
-                st.warning("Failed to display data as a table. Showing raw content:")
+            try:
+                is_excel = isinstance(data, BytesIO) or (isinstance(content, str) and 'excel' in content.lower())
+                if is_excel:
+                    df = format_data(data, 'excel')
+                else:
+                    df = format_data(data, 'csv')
+                
+                if df is not None:
+                    st.dataframe(df)
+                    
+                    if not is_excel:
+                        csv_buffer = BytesIO()
+                        df.to_csv(csv_buffer, index=False)
+                        csv_buffer.seek(0)
+                        st.download_button(
+                            label="📥 Download as CSV",
+                            data=csv_buffer,
+                            file_name="data.csv",
+                            mime="text/csv",
+                            key=f"csv_download_{message_index}"
+                        )
+                    else:
+                        excel_buffer = BytesIO()
+                        with pd.ExcelWriter(excel_buffer, engine='xlsxwriter') as writer:
+                            df.to_excel(writer, index=False, sheet_name='Sheet1')
+                        excel_buffer.seek(0)
+                        st.download_button(
+                            label="📥 Download as Excel",
+                            data=excel_buffer,
+                            file_name="data.xlsx",
+                            mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+                            key=f"excel_download_{message_index}"
+                        )
+                    
+                    display_google_sheets_button(df, f"sheets_upload_{message_index}")
+                else:
+                    st.warning("Failed to display data as a table. Showing raw content:")
+                    st.code(content)
+            except Exception as e:
+                st.error(f"Error processing data: {str(e)}")
                 st.code(content)
         else:
             st.markdown(content)
@@ -159,12 +243,6 @@ def main():
     user_avatar_path = "app/icons/man.png"
     ai_avatar_path = "app/icons/skull.png"
 
-    if 'enable_logging' not in st.session_state:
-        st.session_state.enable_logging = False
-
-    logger = setup_logging(st.session_state.enable_logging)
-    logger.debug("Starting CyberScraper 2077")
-
     if 'chat_history' not in st.session_state:
         st.session_state.chat_history = load_chat_history()
     if 'current_chat_id' not in st.session_state or st.session_state.current_chat_id not in st.session_state.chat_history:
@@ -185,12 +263,6 @@ def main():
 
     with st.sidebar:
         st.title("Conversation History")
-
-        st.session_state.enable_logging = st.toggle("Enable Logging", st.session_state.enable_logging)
-        if st.session_state.enable_logging:
-            st.info("Logging is enabled. Check your console for log messages.")
-        else:
-            st.info("Logging is disabled.")
 
         # Model selection
         st.subheader("Select Model")
@@ -296,14 +368,9 @@ def main():
     prompt = st.chat_input("Enter the URL to scrape or ask a question regarding the data", key="user_input")
 
     if prompt:
-        if st.session_state.enable_logging:
-            logger.debug(f"Received prompt: {prompt}")
         st.session_state.chat_history[st.session_state.current_chat_id]["messages"].append({"role": "user", "content": prompt})
-        save_chat_history(st.session_state.chat_history)
         
         if not st.session_state.web_scraper_chat:
-            if st.session_state.enable_logging:
-                logger.debug("Initializing web_scraper_chat")
             st.session_state.web_scraper_chat = initialize_web_scraper_chat()
 
         with st.chat_message("assistant"):
@@ -313,12 +380,14 @@ def main():
                     st.session_state.web_scraper_chat,
                     prompt
                 )
+                st.write("Debug: Full response type:", type(full_response))
                 if full_response is not None:
-                    st.session_state.chat_history[st.session_state.current_chat_id]["messages"].append({"role": "assistant", "content": full_response})
+                    if isinstance(full_response, tuple) and len(full_response) == 2 and isinstance(full_response[1], BytesIO):
+                        st.session_state.chat_history[st.session_state.current_chat_id]["messages"].append({"role": "assistant", "content": full_response[0]})
+                    else:
+                        st.session_state.chat_history[st.session_state.current_chat_id]["messages"].append({"role": "assistant", "content": full_response})
                     save_chat_history(st.session_state.chat_history)
             except Exception as e:
-                if st.session_state.enable_logging:
-                    logger.error(f"An unexpected error occurred: {str(e)}")
                 st.error(f"An unexpected error occurred: {str(e)}")
             
             st.rerun()

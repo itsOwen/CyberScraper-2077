@@ -41,7 +41,7 @@ def display_info_icons():
         if time.time() - st.session_state.info_icons_time > 10 or ("messages" in st.session_state and len(st.session_state.messages) > 0):
             st.session_state.info_icons_displayed = False
 
-def extract_data_from_markdown(text: Union[str, bytes, io.BytesIO]) -> Union[str, bytes, None]:
+def extract_data_from_markdown(text: Union[str, bytes, io.BytesIO]) -> Union[str, bytes, io.BytesIO, None]:
     if isinstance(text, io.BytesIO):
         return text
     if isinstance(text, bytes):
@@ -49,16 +49,24 @@ def extract_data_from_markdown(text: Union[str, bytes, io.BytesIO]) -> Union[str
     pattern = r'```(csv|excel)\n(.*?)\n```'
     match = re.search(pattern, text, re.DOTALL)
     if match:
-        return match.group(2).strip()
+        data_type = match.group(1)
+        data = match.group(2).strip()
+        if data_type == 'excel':
+            return io.BytesIO(data.encode())
+        return data
     return None
 
 def format_data(data: Union[str, bytes, io.BytesIO], format_type: str):
     try:
         if isinstance(data, io.BytesIO):
+            if format_type == 'excel':
+                return pd.read_excel(data, engine='openpyxl')
             data.seek(0)
-            return pd.read_excel(data, engine='openpyxl')
+            return pd.read_csv(data)
         elif isinstance(data, bytes):
-            return pd.read_excel(io.BytesIO(data), engine='openpyxl')
+            if format_type == 'excel':
+                return pd.read_excel(io.BytesIO(data), engine='openpyxl')
+            return pd.read_csv(io.BytesIO(data))
         else:
             if format_type == 'csv':
                 csv_data = []

@@ -2,7 +2,8 @@ import asyncio
 from typing import Dict, Any, Optional, List, Tuple
 import json
 import pandas as pd
-from io import StringIO
+from io import StringIO, BytesIO
+import base64
 import re
 from functools import lru_cache
 import hashlib
@@ -17,7 +18,6 @@ from langchain.prompts import PromptTemplate
 from langchain.schema.runnable import RunnableSequence
 from langchain.text_splitter import RecursiveCharacterTextSplitter
 import tiktoken
-import logging
 import csv
 from bs4 import BeautifulSoup, Comment
 
@@ -46,8 +46,6 @@ class WebExtractor:
             length_function=self.num_tokens_from_string,
         )
         self.max_tokens = 128000 if model_name == "gpt-4o-mini" else 16385
-        self.logger = logging.getLogger(__name__)
-        self.logger.setLevel(logging.DEBUG)
         self.query_cache = {}
         self.content_hash = None
 
@@ -156,9 +154,7 @@ class WebExtractor:
 
         return text
 
-    async def _extract_info(self, query: str) -> str:
-        self.logger.debug(f"Extracting info with model: {self.model}")
-        
+    async def _extract_info(self, query: str) -> str:        
         if not self.preprocessed_content:
             return "Please provide a URL first before asking for information."
 
@@ -179,14 +175,11 @@ class WebExtractor:
             extracted_data = await self._cached_api_call(content_hash, query)
         else:
             chunks = self.optimized_text_splitter(self.preprocessed_content)
-            self.logger.debug(f"Content split into {len(chunks)} chunks")
             all_extracted_data = []
             for i, chunk in enumerate(chunks):
                 chunk_data = await self._cached_api_call(self._hash_content(chunk), query)
                 all_extracted_data.append(chunk_data)
             extracted_data = self._merge_json_chunks(all_extracted_data)
-
-        self.logger.debug(f"Extracted data (first 500 chars): {extracted_data[:500]}...")
 
         formatted_result = self._format_result(extracted_data, query)
         self.query_cache[cache_key] = formatted_result
@@ -199,7 +192,7 @@ class WebExtractor:
             csv_string, df = self._format_as_csv(extracted_data)
             return f"```csv\n{csv_string}\n```", df
         elif 'excel' in query.lower():
-            return self._format_as_excel_and_save(extracted_data)
+            return self._format_as_excel(extracted_data)
         elif 'sql' in query.lower():
             return self._format_as_sql(extracted_data)
         elif 'html' in query.lower():
@@ -220,7 +213,7 @@ class WebExtractor:
                 else:
                     merged_data.append(data)
             except json.JSONDecodeError:
-                self.logger.error(f"Failed to parse JSON chunk: {chunk[:100]}...")
+                print(f"Error decoding JSON chunk: {chunk[:100]}...")
         return json.dumps(merged_data)
 
     def _format_as_json(self, data: str) -> str:
@@ -260,15 +253,13 @@ class WebExtractor:
             
             return csv_string, df
         except json.JSONDecodeError as e:
-            self.logger.error(f"JSON Decode Error: {str(e)}")
             error_msg = f"Error: Invalid JSON data. Raw data: {data[:500]}..."
             return error_msg, pd.DataFrame()
         except Exception as e:
-            self.logger.error(f"Unexpected error in _format_as_csv: {str(e)}")
             error_msg = f"Error: Failed to convert data to CSV. {str(e)}"
             return error_msg, pd.DataFrame()
 
-    def _format_as_excel_and_save(self, data: str) -> str:
+    def _format_as_excel(self, data: str) -> Tuple[BytesIO, pd.DataFrame]:
         json_pattern = r'```json\s*([\s\S]*?)\s*```'
         match = re.search(json_pattern, data)
         if match:
@@ -276,17 +267,21 @@ class WebExtractor:
         try:
             parsed_data = json.loads(data)
             if not parsed_data:
-                return "No data to convert to Excel."
+                return BytesIO(b"No data to convert to Excel."), pd.DataFrame()
             
             df = pd.DataFrame(parsed_data)
-            output_filename = "output.xlsx"
-            with pd.ExcelWriter(output_filename, engine='xlsxwriter') as writer:
-                df.to_excel(writer, index=False)
-            return f"Excel data saved to {output_filename}"
+            excel_buffer = BytesIO()
+            with pd.ExcelWriter(excel_buffer, engine='xlsxwriter') as writer:
+                df.to_excel(writer, index=False, sheet_name='Sheet1')
+            excel_buffer.seek(0)
+            
+            return excel_buffer, df
         except json.JSONDecodeError:
-            return f"Error: Invalid JSON data. Raw data: {data[:500]}..."
+            error_msg = f"Error: Invalid JSON data. Raw data: {data[:500]}..."
+            return BytesIO(error_msg.encode()), pd.DataFrame()
         except Exception as e:
-            return f"Error: Failed to convert data to Excel. {str(e)}"
+            error_msg = f"Error: Failed to convert data to Excel. {str(e)}"
+            return BytesIO(error_msg.encode()), pd.DataFrame()
 
     def _format_as_sql(self, data: str) -> str:
         json_pattern = r'```json\s*([\s\S]*?)\s*```'

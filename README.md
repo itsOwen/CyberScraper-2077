@@ -215,6 +215,7 @@ I suggest you enter the URL structure every time If you want to scrape multiple 
 
 ```bash
 URL Example : "https://news.ycombinator.com/?p=1 1-3 or 1,2,3,4"
+If you want to scrape a specific page, Just enter the query please scrape page number 1 or 2, If you want to scrape all pages, Simply give a query like scrape all pages in csv or whatever format you want.
 ```
 
 ### Handling Errors

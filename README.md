@@ -167,6 +167,73 @@ Note: Ensure that your firewall allows connections to port 11434 for Ollama.
 
 4. Watch as CyberScraper 2077 tears through the net, extracting your data faster than you can say "flatline"!
 
+## 🌐 Multi-Page Scraping (BETA)
+
+> **Note**: The multi-page scraping feature is currently in beta. While functional, you may encounter occasional issues or unexpected behavior. We appreciate your feedback and patience as we continue to improve this feature.
+
+CyberScraper 2077 now supports multi-page scraping, allowing you to extract data from multiple pages of a website in one go. This feature is perfect for scraping paginated content, search results, or any site with data spread across multiple pages.
+
+### How to Use Multi-Page Scraping
+
+I suggest you enter the URL structure every time If you want to scrape multiple pages so it can detect the URL structure easily, It detects nearly all URL types.
+
+1. **Basic Usage**:
+   To scrape multiple pages, use the following format when entering the URL:
+   ```
+   https://example.com/page 1-5
+   https://example.com/p/ 1-6
+   https://example.com/xample/something-something-1279?p=1 1-3
+   ```
+   This will scrape pages 1 through 5 of the website.
+
+2. **Custom Page Ranges**:
+   You can specify custom page ranges:
+   ```
+   https://example.com/p/ 1-5,7,9-12
+   https://example.com/xample/something-something-1279?p=1 1,7,8,9
+   ```
+   This will scrape pages 1 to 5, page 7, and pages 9 to 12.
+
+3. **URL Patterns**:
+   For websites with different URL structures, you can specify a pattern:
+   ```
+   https://example.com/search?q=cyberpunk&page={page} 1-5
+   ```
+   Replace `{page}` with where the page number should be in the URL.
+
+4. **Automatic Pattern Detection**:
+   If you don't specify a pattern, CyberScraper 2077 will attempt to detect the URL pattern automatically. However, for best results, specifying the pattern is recommended.
+
+### Tips for Effective Multi-Page Scraping
+
+- Start with a small range of pages to test before scraping a large number.
+- Be mindful of the website's load and your scraping speed to avoid overloading servers.
+- Use the `simulate_human` option for more natural scraping behavior on sites with anti-bot measures.
+- Regularly check the website's `robots.txt` file and terms of service to ensure compliance.
+
+### Example
+
+```bash
+URL Example : "https://news.ycombinator.com/?p=1 1-3 or 1,2,3,4"
+```
+
+### Handling Errors
+
+If you encounter errors during multi-page scraping:
+- Check your internet connection
+- Verify the URL pattern is correct
+- Ensure the website allows scraping
+- Try reducing the number of pages or increasing the delay between requests
+
+### Beta Feedback
+
+As this feature is in beta, we highly value your feedback. If you encounter any issues or have suggestions for improvement, please:
+1. Open an issue on our GitHub repository
+2. Provide detailed information about the problem, including the URL structure and number of pages you were attempting to scrape
+3. Share any error messages or unexpected behaviors you observed
+
+Your input is crucial in helping us refine and stabilize this feature for future releases.
+
 ## Setup Google Sheets Authentication:
 
 1. Go to the Google Cloud Console (https://console.cloud.google.com/).

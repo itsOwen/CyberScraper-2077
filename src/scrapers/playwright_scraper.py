@@ -1,10 +1,12 @@
 from playwright.async_api import async_playwright, Browser, BrowserContext, Page
 from playwright_stealth import stealth_async
 from .base_scraper import BaseScraper
-from typing import Dict, Any, Optional
+from typing import Dict, Any, Optional, List, Tuple
 import asyncio
 import random
 import logging
+import re
+from urllib.parse import urlparse, parse_qs, urlencode, urlunparse
 
 class ScraperConfig:
     def __init__(self,
@@ -12,20 +14,28 @@ class ScraperConfig:
                  simulate_human: bool = False,
                  use_custom_headers: bool = True,
                  hide_webdriver: bool = True,
-                 bypass_cloudflare: bool = True):
+                 bypass_cloudflare: bool = True,
+                 headless: bool = True,
+                 debug: bool = False,
+                 timeout: int = 60000,
+                 wait_for: str = 'networkidle'):
         self.use_stealth = use_stealth
         self.simulate_human = simulate_human
         self.use_custom_headers = use_custom_headers
         self.hide_webdriver = hide_webdriver
         self.bypass_cloudflare = bypass_cloudflare
+        self.headless = headless
+        self.debug = debug
+        self.timeout = timeout
+        self.wait_for = wait_for
 
 class PlaywrightScraper(BaseScraper):
     def __init__(self, config: ScraperConfig = ScraperConfig()):
         self.logger = logging.getLogger(__name__)
-        self.logger.setLevel(logging.DEBUG)
+        self.logger.setLevel(logging.DEBUG if config.debug else logging.INFO)
         self.config = config
 
-    async def fetch_content(self, url: str, proxy: Optional[str] = None) -> str:
+    async def fetch_content(self, url: str, proxy: Optional[str] = None, pages: Optional[str] = None, url_pattern: Optional[str] = None) -> List[str]:
         async with async_playwright() as p:
             browser = await self.launch_browser(p, proxy)
             context = await self.create_context(browser, proxy)
@@ -36,24 +46,49 @@ class PlaywrightScraper(BaseScraper):
             await self.set_browser_features(page)
             
             try:
-                content = await self.navigate_and_get_content(page, url)
-                if self.config.bypass_cloudflare and "Cloudflare" in content and "ray ID" in content.lower():
-                    self.logger.info("Cloudflare detected, attempting to bypass...")
-                    content = await self.bypass_cloudflare(page, url)
+                contents = await self.scrape_multiple_pages(page, url, pages, url_pattern)
             except Exception as e:
                 self.logger.error(f"Error during scraping: {str(e)}")
-                content = f"Error: {str(e)}"
+                contents = [f"Error: {str(e)}"]
             finally:
+                if self.config.debug:
+                    self.logger.info("Scraping completed. Keeping browser open for debugging.")
+                    await asyncio.sleep(30)  # Keep the browser open for 30 seconds
                 await browser.close()
             
-            return content
+            return contents
+
+    async def scrape_multiple_pages(self, page: Page, base_url: str, pages: Optional[str] = None, url_pattern: Optional[str] = None) -> List[str]:
+        if not url_pattern:
+            url_pattern = self.detect_url_pattern(base_url)
+            if not url_pattern:
+                return ["Error: Unable to detect URL pattern. Please provide a pattern."]
+
+        page_numbers = self.parse_page_numbers(pages)
+        contents = []
+
+        for page_num in page_numbers:
+            current_url = self.apply_url_pattern(base_url, url_pattern, page_num)
+            self.logger.info(f"Scraping page {page_num}: {current_url}")
+            
+            content = await self.navigate_and_get_content(page, current_url)
+            if self.config.bypass_cloudflare and "Cloudflare" in content and "ray ID" in content.lower():
+                self.logger.info("Cloudflare detected, attempting to bypass...")
+                content = await self.bypass_cloudflare(page, current_url)
+            
+            contents.append(content)
+            
+            # Add a delay between page navigations
+            await asyncio.sleep(random.uniform(1, 3))
+
+        return contents
 
     async def launch_browser(self, playwright, proxy: Optional[str] = None) -> Browser:
         return await playwright.chromium.launch(
-            headless=True,  # Set to False for GUI
+            headless=self.config.headless,
             args=['--no-sandbox', '--disable-setuid-sandbox', '--disable-infobars',
                   '--window-position=0,0', '--ignore-certifcate-errors',
-                  '--ignore-certifcate-errors-spki-list', '--user-agent=Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36'],
+                  '--ignore-certifcate-errors-spki-list'],
             proxy={'server': proxy} if proxy else None
         )
 
@@ -86,17 +121,17 @@ class PlaywrightScraper(BaseScraper):
             ''')
 
     async def navigate_and_get_content(self, page: Page, url: str) -> str:
-        await page.goto(url, wait_until='domcontentloaded', timeout=30000)
+        await page.goto(url, wait_until=self.config.wait_for, timeout=self.config.timeout)
         if self.config.simulate_human:
             await self.simulate_human_behavior(page)
         else:
-            await asyncio.sleep(1)
+            await asyncio.sleep(2)  # Wait for 2 seconds to ensure content is loaded
         return await page.content()
 
     async def bypass_cloudflare(self, page: Page, url: str) -> str:
         max_retries = 3
         for _ in range(max_retries):
-            await page.reload(wait_until='domcontentloaded', timeout=30000)
+            await page.reload(wait_until=self.config.wait_for, timeout=self.config.timeout)
             if self.config.simulate_human:
                 await self.simulate_human_behavior(page)
             else:
@@ -130,6 +165,49 @@ class PlaywrightScraper(BaseScraper):
             random_element = random.choice(elements)
             await random_element.hover()
             await asyncio.sleep(random.uniform(0.3, 0.7))
+
+    def detect_url_pattern(self, url: str) -> Optional[str]:
+        parsed_url = urlparse(url)
+        query = parse_qs(parsed_url.query)
+
+        # Check query parameters for any numeric values
+        for param, value in query.items():
+            if value and value[0].isdigit():
+                return f"{param}={{{param}}}"
+
+        # Check path for numeric segments
+        path_parts = parsed_url.path.split('/')
+        for i, part in enumerate(path_parts):
+            if part.isdigit():
+                path_parts[i] = "{page}"
+                return '/'.join(path_parts)
+
+        # If no pattern is detected, return None
+        return None
+
+    def apply_url_pattern(self, base_url: str, pattern: str, page_num: int) -> str:
+        parsed_url = urlparse(base_url)
+        if '=' in pattern:  # Query parameter pattern
+            query = parse_qs(parsed_url.query)
+            param, value = pattern.split('=')
+            query[param] = [value.format(**{param: page_num})]
+            return urlunparse(parsed_url._replace(query=urlencode(query, doseq=True)))
+        else:  # Path pattern
+            return urlunparse(parsed_url._replace(path=pattern.format(page=page_num)))
+
+    def parse_page_numbers(self, pages: Optional[str]) -> List[int]:
+        if not pages:
+            return [1]  # Default to first page if not specified
+        
+        page_numbers = []
+        for part in pages.split(','):
+            if '-' in part:
+                start, end = map(int, part.split('-'))
+                page_numbers.extend(range(start, end + 1))
+            else:
+                page_numbers.append(int(part))
+        
+        return sorted(set(page_numbers))  # Remove duplicates and sort
 
     async def extract(self, content: str) -> Dict[str, Any]:
         return {"raw_content": content}

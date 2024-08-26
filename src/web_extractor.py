@@ -1,5 +1,5 @@
 import asyncio
-from typing import Dict, Any, Optional, List, Tuple
+from typing import Dict, Any, Optional, List, Tuple, Union
 import json
 import pandas as pd
 from io import StringIO, BytesIO
@@ -20,9 +20,10 @@ from langchain.text_splitter import RecursiveCharacterTextSplitter
 import tiktoken
 import csv
 from bs4 import BeautifulSoup, Comment
+from .scrapers.playwright_scraper import PlaywrightScraper, ScraperConfig
 
 class WebExtractor:
-    def __init__(self, model_name: str = "gpt-4o-mini", model_kwargs: Dict[str, Any] = None, proxy: Optional[str] = None):
+    def __init__(self, model_name: str = "gpt-4o-mini", model_kwargs: Dict[str, Any] = None, proxy: Optional[str] = None, headless: bool = True, debug: bool = False):
         model_kwargs = model_kwargs or {}
         if isinstance(model_name, str) and model_name.startswith("ollama:"):
             self.model = OllamaModelManager.get_model(model_name[7:])
@@ -31,7 +32,8 @@ class WebExtractor:
         else:
             self.model = Models.get_model(model_name, **model_kwargs)
         
-        self.playwright_scraper = PlaywrightScraper()
+        scraper_config = ScraperConfig(headless=headless, debug=debug)
+        self.playwright_scraper = PlaywrightScraper(config=scraper_config)
         self.html_scraper = HTMLScraper()
         self.json_scraper = JSONScraper()
         self.proxy_manager = ProxyManager(proxy)
@@ -77,7 +79,7 @@ class WebExtractor:
             Based on the following preprocessed webpage content and the user's request, extract the relevant information.
             Always present the data as a JSON array of objects, regardless of the user's requested format.
             Each object in the array should represent one item or row of data.
-            Use the following format without any unnecessary text, provide only the format and nothing else:
+            Use the following format without any commentary text, provide only the format and nothing else:
             
             [
             {{
@@ -107,7 +109,11 @@ class WebExtractor:
 
     async def process_query(self, user_input: str) -> str:
         if user_input.lower().startswith("http"):
-            response = await self._fetch_url(user_input)
+            parts = user_input.split(maxsplit=2)
+            url = parts[0]
+            pages = parts[1] if len(parts) > 1 else None
+            url_pattern = parts[2] if len(parts) > 2 else None
+            response = await self._fetch_url(url, pages, url_pattern)
         elif not self.current_content:
             response = "Please provide a URL first before asking for information."
         else:
@@ -117,10 +123,12 @@ class WebExtractor:
         self.conversation_history.append(f"AI: {response}")
         return response
 
-    async def _fetch_url(self, url: str) -> str:
+    async def _fetch_url(self, url: str, pages: Optional[str] = None, url_pattern: Optional[str] = None) -> str:
         self.current_url = url
         proxy = await self.proxy_manager.get_proxy()
-        self.current_content = await self.playwright_scraper.fetch_content(self.current_url, proxy)
+        
+        contents = await self.playwright_scraper.fetch_content(url, proxy, pages, url_pattern)
+        self.current_content = "\n".join(contents)
         self.preprocessed_content = self._preprocess_content(self.current_content)
         
         new_hash = self._hash_content(self.preprocessed_content)
@@ -128,7 +136,9 @@ class WebExtractor:
             self.content_hash = new_hash
             self.query_cache.clear()
         
-        return f"I've fetched and preprocessed the content from {self.current_url}. What would you like to know about it?"
+        return f"I've fetched and preprocessed the content from {self.current_url}" + \
+               (f" (pages: {pages})" if pages else "") + \
+               ". What would you like to know about it?"
 
     def _preprocess_content(self, content: str) -> str:
         soup = BeautifulSoup(content, 'html.parser')
@@ -185,19 +195,29 @@ class WebExtractor:
         self.query_cache[cache_key] = formatted_result
         return formatted_result
 
-    def _format_result(self, extracted_data: str, query: str) -> str:
-        if 'json' in query.lower():
-            return self._format_as_json(extracted_data)
-        elif 'csv' in query.lower():
-            csv_string, df = self._format_as_csv(extracted_data)
-            return f"```csv\n{csv_string}\n```", df
-        elif 'excel' in query.lower():
-            return self._format_as_excel(extracted_data)
-        elif 'sql' in query.lower():
-            return self._format_as_sql(extracted_data)
-        elif 'html' in query.lower():
-            return self._format_as_html(extracted_data)
-        else:
+    def _format_result(self, extracted_data: str, query: str) -> Union[str, Tuple[str, pd.DataFrame], BytesIO]:
+        try:
+            json_data = json.loads(extracted_data)
+            
+            if 'json' in query.lower():
+                return self._format_as_json(json.dumps(json_data))
+            elif 'csv' in query.lower():
+                csv_string, df = self._format_as_csv(json.dumps(json_data))
+                return f"```csv\n{csv_string}\n```", df
+            elif 'excel' in query.lower():
+                return self._format_as_excel(json.dumps(json_data))
+            elif 'sql' in query.lower():
+                return self._format_as_sql(json.dumps(json_data))
+            elif 'html' in query.lower():
+                return self._format_as_html(json.dumps(json_data))
+            else:
+                if isinstance(json_data, list) and all(isinstance(item, dict) for item in json_data):
+                    csv_string, df = self._format_as_csv(json.dumps(json_data))
+                    return f"```csv\n{csv_string}\n```", df
+                else:
+                    return self._format_as_json(json.dumps(json_data))
+        
+        except json.JSONDecodeError:
             return self._format_as_text(extracted_data)
 
     def optimized_text_splitter(self, text: str) -> List[str]:

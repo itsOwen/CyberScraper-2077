@@ -38,7 +38,7 @@ Whether you're a corpo data analyst, a street-smart netrunner, or just someone l
 - 📄 **Caching**: We implemented content-based and query-based caching using LRU cache and a custom dictionary to reduce redundant API calls.
 - ✅ **Upload to Google Sheets**: Now you can easily upload your extract csv data to google sheets with one click.
 - 🌐 **Proxy Mode (Coming Soon)**: Built-in proxy support to keep you ghosting through the net.
-- 🛡️ **Navigate through the Pages (Coming Soon)**: Navigate through the webpage and scrap the data from different pages. 
+- 🛡️ **Navigate through the Pages (BETA)**: Navigate through the webpage and scrap the data from different pages. 
 
 ## 🎥 Demo
 

@@ -60,7 +60,7 @@ Please follow the Docker Container Guide given below, As I won't be able to main
 
 2. Create and activate a virtual environment:
    ```bash
-   virtualenv even
+   virtualenv venv
    source venv/bin/activate  # Optional
    ```
 

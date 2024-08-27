@@ -31,7 +31,7 @@ Whether you're a corpo data analyst, a street-smart netrunner, or just someone l
 - 💻 **Sleek Streamlit Interface**: User-friendly GUI that even a chrome-armed street samurai could navigate.
 - 🔄 **Multi-Format Support**: Export your data in JSON, CSV, HTML, SQL or Excel – whatever fits your cyberdeck.
 - 🌐 **Stealth Mode**: Implemented stealth mode parameters that helps it from getting detected as bot.
-- 🤖 **Ollama Support**: Use a huge libarary of open source LLMs.
+- 🤖 **Ollama Support**: Use a huge library of open source LLMs.
 - 🚀 **Async Operations**: Lightning-fast scraping that would make a Trauma Team jealous.
 - 🧠 **Smart Parsing**: Structures scraped content as if it was extracted straight from the engram of a master netrunner.
 - 🛡️ **Ethical Scraping**: Respects robots.txt and site policies. We may be in 2077, but we still have standards.

@@ -40,11 +40,11 @@ class PlaywrightScraper(BaseScraper):
             browser = await self.launch_browser(p, proxy)
             context = await self.create_context(browser, proxy)
             page = await context.new_page()
-            
+
             if self.config.use_stealth:
                 await stealth_async(page)
             await self.set_browser_features(page)
-            
+
             try:
                 contents = await self.scrape_multiple_pages(page, url, pages, url_pattern)
             except Exception as e:
@@ -53,33 +53,38 @@ class PlaywrightScraper(BaseScraper):
             finally:
                 if self.config.debug:
                     self.logger.info("Scraping completed. Keeping browser open for debugging.")
-                    await asyncio.sleep(30)  # Keep the browser open for 30 seconds
+                    await asyncio.sleep(30)
                 await browser.close()
-            
+
             return contents
 
     async def scrape_multiple_pages(self, page: Page, base_url: str, pages: Optional[str] = None, url_pattern: Optional[str] = None) -> List[str]:
-        if not url_pattern:
-            url_pattern = self.detect_url_pattern(base_url)
-            if not url_pattern:
-                return ["Error: Unable to detect URL pattern. Please provide a pattern."]
-
-        page_numbers = self.parse_page_numbers(pages)
         contents = []
 
-        for page_num in page_numbers:
-            current_url = self.apply_url_pattern(base_url, url_pattern, page_num)
-            self.logger.info(f"Scraping page {page_num}: {current_url}")
-            
-            content = await self.navigate_and_get_content(page, current_url)
+        if not url_pattern:
+            url_pattern = self.detect_url_pattern(base_url)
+
+        if not url_pattern and not pages:
+            self.logger.info(f"Scraping single page: {base_url}")
+            content = await self.navigate_and_get_content(page, base_url)
             if self.config.bypass_cloudflare and "Cloudflare" in content and "ray ID" in content.lower():
                 self.logger.info("Cloudflare detected, attempting to bypass...")
-                content = await self.bypass_cloudflare(page, current_url)
-            
+                content = await self.bypass_cloudflare(page, base_url)
             contents.append(content)
-            
-            # Add a delay between page navigations
-            await asyncio.sleep(random.uniform(1, 3))
+        else:
+            page_numbers = self.parse_page_numbers(pages) if pages else [1]
+            for page_num in page_numbers:
+                current_url = self.apply_url_pattern(base_url, url_pattern, page_num) if url_pattern else base_url
+                self.logger.info(f"Scraping page {page_num}: {current_url}")
+
+                content = await self.navigate_and_get_content(page, current_url)
+                if self.config.bypass_cloudflare and "Cloudflare" in content and "ray ID" in content.lower():
+                    self.logger.info("Cloudflare detected, attempting to bypass...")
+                    content = await self.bypass_cloudflare(page, current_url)
+
+                contents.append(content)
+
+                await asyncio.sleep(random.uniform(1, 3))
 
         return contents
 
@@ -125,7 +130,7 @@ class PlaywrightScraper(BaseScraper):
         if self.config.simulate_human:
             await self.simulate_human_behavior(page)
         else:
-            await asyncio.sleep(2)  # Wait for 2 seconds to ensure content is loaded
+            await asyncio.sleep(2)
         return await page.content()
 
     async def bypass_cloudflare(self, page: Page, url: str) -> str:
@@ -136,14 +141,14 @@ class PlaywrightScraper(BaseScraper):
                 await self.simulate_human_behavior(page)
             else:
                 await asyncio.sleep(2)
-            
+
             content = await page.content()
             if "Cloudflare" not in content or "ray ID" not in content.lower():
                 self.logger.info("Successfully bypassed Cloudflare")
                 return content
-            
+
             self.logger.info("Cloudflare still detected, retrying...")
-        
+
         self.logger.warning("Failed to bypass Cloudflare after multiple attempts")
         return content
 
@@ -170,35 +175,34 @@ class PlaywrightScraper(BaseScraper):
         parsed_url = urlparse(url)
         query = parse_qs(parsed_url.query)
 
-        # Check query parameters for any numeric values
         for param, value in query.items():
             if value and value[0].isdigit():
                 return f"{param}={{{param}}}"
 
-        # Check path for numeric segments
         path_parts = parsed_url.path.split('/')
         for i, part in enumerate(path_parts):
             if part.isdigit():
                 path_parts[i] = "{page}"
                 return '/'.join(path_parts)
 
-        # If no pattern is detected, return None
         return None
 
     def apply_url_pattern(self, base_url: str, pattern: str, page_num: int) -> str:
         parsed_url = urlparse(base_url)
-        if '=' in pattern:  # Query parameter pattern
+        if '=' in pattern:  
             query = parse_qs(parsed_url.query)
             param, value = pattern.split('=')
             query[param] = [value.format(**{param: page_num})]
             return urlunparse(parsed_url._replace(query=urlencode(query, doseq=True)))
-        else:  # Path pattern
+        elif '{page}' in pattern: 
             return urlunparse(parsed_url._replace(path=pattern.format(page=page_num)))
+        else:
+            return base_url
 
     def parse_page_numbers(self, pages: Optional[str]) -> List[int]:
         if not pages:
-            return [1]  # Default to first page if not specified
-        
+            return [1]
+
         page_numbers = []
         for part in pages.split(','):
             if '-' in part:
@@ -206,8 +210,8 @@ class PlaywrightScraper(BaseScraper):
                 page_numbers.extend(range(start, end + 1))
             else:
                 page_numbers.append(int(part))
-        
-        return sorted(set(page_numbers))  # Remove duplicates and sort
+
+        return sorted(set(page_numbers))
 
     async def extract(self, content: str) -> Dict[str, Any]:
         return {"raw_content": content}

@@ -109,36 +109,38 @@ class WebExtractor:
 
     async def process_query(self, user_input: str) -> str:
         if user_input.lower().startswith("http"):
-            parts = user_input.split(maxsplit=2)
+            parts = user_input.split(maxsplit=3)
             url = parts[0]
-            pages = parts[1] if len(parts) > 1 else None
-            url_pattern = parts[2] if len(parts) > 2 else None
-            response = await self._fetch_url(url, pages, url_pattern)
+            pages = parts[1] if len(parts) > 1 and not parts[1].startswith('-') else None
+            url_pattern = parts[2] if len(parts) > 2 and not parts[2].startswith('-') else None
+            handle_captcha = '-captcha' in user_input.lower()
+            
+            response = await self._fetch_url(url, pages, url_pattern, handle_captcha)
         elif not self.current_content:
             response = "Please provide a URL first before asking for information."
         else:
             response = await self._extract_info(user_input)
-        
+
         self.conversation_history.append(f"Human: {user_input}")
         self.conversation_history.append(f"AI: {response}")
         return response
 
-    async def _fetch_url(self, url: str, pages: Optional[str] = None, url_pattern: Optional[str] = None) -> str:
+    async def _fetch_url(self, url: str, pages: Optional[str] = None, url_pattern: Optional[str] = None, handle_captcha: bool = False) -> str:
         self.current_url = url
         proxy = await self.proxy_manager.get_proxy()
-        
-        contents = await self.playwright_scraper.fetch_content(url, proxy, pages, url_pattern)
+
+        contents = await self.playwright_scraper.fetch_content(url, proxy, pages, url_pattern, handle_captcha)
         self.current_content = "\n".join(contents)
         self.preprocessed_content = self._preprocess_content(self.current_content)
-        
+
         new_hash = self._hash_content(self.preprocessed_content)
         if self.content_hash != new_hash:
             self.content_hash = new_hash
             self.query_cache.clear()
-        
+
         return f"I've fetched and preprocessed the content from {self.current_url}" + \
-               (f" (pages: {pages})" if pages else "") + \
-               ". What would you like to know about it?"
+            (f" (pages: {pages})" if pages else "") + \
+            ". What would you like to know about it?"
 
     def _preprocess_content(self, content: str) -> str:
         soup = BeautifulSoup(content, 'html.parser')

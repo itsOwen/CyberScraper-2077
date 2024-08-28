@@ -1,5 +1,4 @@
 from playwright.async_api import async_playwright, Browser, BrowserContext, Page
-from playwright_stealth import stealth_async
 from .base_scraper import BaseScraper
 from typing import Dict, Any, Optional, List, Tuple
 import asyncio
@@ -35,17 +34,19 @@ class PlaywrightScraper(BaseScraper):
         self.logger.setLevel(logging.DEBUG if config.debug else logging.INFO)
         self.config = config
 
-    async def fetch_content(self, url: str, proxy: Optional[str] = None, pages: Optional[str] = None, url_pattern: Optional[str] = None) -> List[str]:
+    async def fetch_content(self, url: str, proxy: Optional[str] = None, pages: Optional[str] = None, url_pattern: Optional[str] = None, handle_captcha: bool = False) -> List[str]:
         async with async_playwright() as p:
-            browser = await self.launch_browser(p, proxy)
+            browser = await self.launch_browser(p, proxy, handle_captcha)
             context = await self.create_context(browser, proxy)
             page = await context.new_page()
 
             if self.config.use_stealth:
-                await stealth_async(page)
+                await self.apply_stealth_settings(page)
             await self.set_browser_features(page)
 
             try:
+                if handle_captcha:
+                    await self.handle_captcha(page, url)
                 contents = await self.scrape_multiple_pages(page, url, pages, url_pattern)
             except Exception as e:
                 self.logger.error(f"Error during scraping: {str(e)}")
@@ -58,39 +59,9 @@ class PlaywrightScraper(BaseScraper):
 
             return contents
 
-    async def scrape_multiple_pages(self, page: Page, base_url: str, pages: Optional[str] = None, url_pattern: Optional[str] = None) -> List[str]:
-        contents = []
-
-        if not url_pattern:
-            url_pattern = self.detect_url_pattern(base_url)
-
-        if not url_pattern and not pages:
-            self.logger.info(f"Scraping single page: {base_url}")
-            content = await self.navigate_and_get_content(page, base_url)
-            if self.config.bypass_cloudflare and "Cloudflare" in content and "ray ID" in content.lower():
-                self.logger.info("Cloudflare detected, attempting to bypass...")
-                content = await self.bypass_cloudflare(page, base_url)
-            contents.append(content)
-        else:
-            page_numbers = self.parse_page_numbers(pages) if pages else [1]
-            for page_num in page_numbers:
-                current_url = self.apply_url_pattern(base_url, url_pattern, page_num) if url_pattern else base_url
-                self.logger.info(f"Scraping page {page_num}: {current_url}")
-
-                content = await self.navigate_and_get_content(page, current_url)
-                if self.config.bypass_cloudflare and "Cloudflare" in content and "ray ID" in content.lower():
-                    self.logger.info("Cloudflare detected, attempting to bypass...")
-                    content = await self.bypass_cloudflare(page, current_url)
-
-                contents.append(content)
-
-                await asyncio.sleep(random.uniform(1, 3))
-
-        return contents
-
-    async def launch_browser(self, playwright, proxy: Optional[str] = None) -> Browser:
+    async def launch_browser(self, playwright, proxy: Optional[str] = None, handle_captcha: bool = False) -> Browser:
         return await playwright.chromium.launch(
-            headless=self.config.headless,
+            headless=self.config.headless and not handle_captcha,
             args=['--no-sandbox', '--disable-setuid-sandbox', '--disable-infobars',
                   '--window-position=0,0', '--ignore-certifcate-errors',
                   '--ignore-certifcate-errors-spki-list'],
@@ -106,6 +77,30 @@ class PlaywrightScraper(BaseScraper):
             ignore_https_errors=True
         )
 
+    async def apply_stealth_settings(self, page: Page):
+        await page.evaluate('''
+            () => {
+                Object.defineProperty(navigator, 'webdriver', {
+                    get: () => undefined
+                });
+
+                Object.defineProperty(navigator, 'languages', {
+                    get: () => ['en-US', 'en']
+                });
+
+                Object.defineProperty(navigator, 'plugins', {
+                    get: () => [1, 2, 3, 4, 5]
+                });
+
+                const originalQuery = window.navigator.permissions.query;
+                window.navigator.permissions.query = (parameters) => (
+                    parameters.name === 'notifications' ?
+                        Promise.resolve({ state: Notification.permission }) :
+                        originalQuery(parameters)
+                );
+            }
+        ''')
+
     async def set_browser_features(self, page: Page):
         if self.config.use_custom_headers:
             await page.set_extra_http_headers({
@@ -118,12 +113,49 @@ class PlaywrightScraper(BaseScraper):
                 'Sec-Fetch-User': '?1',
                 'Upgrade-Insecure-Requests': '1'
             })
-        if self.config.hide_webdriver:
-            await page.evaluate('''
-                Object.defineProperty(navigator, 'webdriver', {
-                    get: () => undefined
-                })
-            ''')
+
+    async def handle_captcha(self, page: Page, url: str):
+        self.logger.info("Waiting for user to solve CAPTCHA...")
+        await page.goto(url, wait_until=self.config.wait_for, timeout=self.config.timeout)
+        
+        print("Please solve the CAPTCHA in the browser window.")
+        print("Once solved, press Enter in this console to continue...")
+        input()
+        
+        await page.wait_for_load_state('networkidle')
+        self.logger.info("CAPTCHA handling completed.")
+
+    async def scrape_multiple_pages(self, page: Page, base_url: str, pages: Optional[str] = None, url_pattern: Optional[str] = None) -> List[str]:
+        contents = []
+
+        if not url_pattern:
+            url_pattern = self.detect_url_pattern(base_url)
+
+        if not url_pattern and not pages:
+            # Single page scraping
+            self.logger.info(f"Scraping single page: {base_url}")
+            content = await self.navigate_and_get_content(page, base_url)
+            if self.config.bypass_cloudflare and "Cloudflare" in content and "ray ID" in content.lower():
+                self.logger.info("Cloudflare detected, attempting to bypass...")
+                content = await self.bypass_cloudflare(page, base_url)
+            contents.append(content)
+        else:
+            # Multiple page scraping
+            page_numbers = self.parse_page_numbers(pages) if pages else [1]
+            for page_num in page_numbers:
+                current_url = self.apply_url_pattern(base_url, url_pattern, page_num) if url_pattern else base_url
+                self.logger.info(f"Scraping page {page_num}: {current_url}")
+
+                content = await self.navigate_and_get_content(page, current_url)
+                if self.config.bypass_cloudflare and "Cloudflare" in content and "ray ID" in content.lower():
+                    self.logger.info("Cloudflare detected, attempting to bypass...")
+                    content = await self.bypass_cloudflare(page, current_url)
+
+                contents.append(content)
+
+                await asyncio.sleep(random.uniform(1, 3))
+
+        return contents
 
     async def navigate_and_get_content(self, page: Page, url: str) -> str:
         await page.goto(url, wait_until=self.config.wait_for, timeout=self.config.timeout)
@@ -189,12 +221,12 @@ class PlaywrightScraper(BaseScraper):
 
     def apply_url_pattern(self, base_url: str, pattern: str, page_num: int) -> str:
         parsed_url = urlparse(base_url)
-        if '=' in pattern:  
+        if '=' in pattern: 
             query = parse_qs(parsed_url.query)
             param, value = pattern.split('=')
             query[param] = [value.format(**{param: page_num})]
             return urlunparse(parsed_url._replace(query=urlencode(query, doseq=True)))
-        elif '{page}' in pattern: 
+        elif '{page}' in pattern:
             return urlunparse(parsed_url._replace(path=pattern.format(page=page_num)))
         else:
             return base_url

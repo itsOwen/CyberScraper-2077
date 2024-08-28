@@ -37,6 +37,7 @@ Whether you're a corpo data analyst, a street-smart netrunner, or just someone l
 - 🛡️ **Ethical Scraping**: Respects robots.txt and site policies. We may be in 2077, but we still have standards.
 - 📄 **Caching**: We implemented content-based and query-based caching using LRU cache and a custom dictionary to reduce redundant API calls.
 - ✅ **Upload to Google Sheets**: Now you can easily upload your extract csv data to google sheets with one click.
+- 🤖 **Bypass Captcha**: Bypass captcha by using the -captcha at the end of the url.
 - 🌐 **Proxy Mode (Coming Soon)**: Built-in proxy support to keep you ghosting through the net.
 - 🛡️ **Navigate through the Pages (BETA)**: Navigate through the webpage and scrap the data from different pages. 
 
@@ -78,12 +79,9 @@ Please follow the Docker Container Guide given below, As I won't be able to main
 
    Linux/Mac:
    ```bash
-   export OPENAI_API_KEY='your-api-key-here'
+   export OPENAI_API_KEY="your-api-key-here"
    ```
-   For Windows:
-   ```bash
-   set OPENAI_API_KEY=your-api-key-here
-   ```
+
 6. If you want to use the Ollama:
 
 Note: I only recommend using OpenAI API as GPT4o-mini is really good at following instructions, If you are using open-source LLMs make sure you have a good system as the speed of the data generation/presentation depends on how good your system is in running the LLM and also you may have to fine-tune the prompt and add some additional filters yourself.
@@ -118,7 +116,7 @@ If you prefer to use Docker, follow these steps to set up and run CyberScraper 2
      ```
    - With OpenAI API key:
      ```bash
-     docker run -p 8501:8501 -e OPENAI_API_KEY='your-actual-api-key' cyberscraper-2077
+     docker run -p 8501:8501 -e OPENAI_API_KEY="your-actual-api-key" cyberscraper-2077
      ```
 
 5. Open your browser and navigate to `http://localhost:8501`.
@@ -271,6 +269,8 @@ bypass_cloudflare: bool = True:
 ```
 
 Adjust these settings based on your target website and environment for optimal results.
+
+You can also bypass the captcha using the ```-captcha``` parameter at the end of the URL, the browser window will popup, complete the capatcha and go back to your terminal window, Press enter and the bot will complete it's task.
 
 ## 🤝 Contributing
 

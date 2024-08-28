@@ -37,7 +37,7 @@ Whether you're a corpo data analyst, a street-smart netrunner, or just someone l
 - 🛡️ **Ethical Scraping**: Respects robots.txt and site policies. We may be in 2077, but we still have standards.
 - 📄 **Caching**: We implemented content-based and query-based caching using LRU cache and a custom dictionary to reduce redundant API calls.
 - ✅ **Upload to Google Sheets**: Now you can easily upload your extract csv data to google sheets with one click.
-- 🤖 **Bypass Captcha**: Bypass captcha by using the -captcha at the end of the url.
+- 🤖 **Bypass Captcha**: Bypass captcha by using the -captcha at the end of the url. (Currently only works natively, doesn't work on docker)
 - 🌐 **Proxy Mode (Coming Soon)**: Built-in proxy support to keep you ghosting through the net.
 - 🛡️ **Navigate through the Pages (BETA)**: Navigate through the webpage and scrap the data from different pages. 
 

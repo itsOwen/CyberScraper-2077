@@ -297,7 +297,7 @@ This project is licensed under the MIT License - see the [LICENSE](LICENSE) file
 Got questions? Need support? Want to hire me for a gig?
 
 - 📧 Email: owensingh72@gmail.com
-- 🐦 Twitter: [@_owensingh](https://x.com/_owensingh)
+- 🐦 Twitter: [@owensingh_](https://x.com/owensingh_)
 - 💬 Website: [Portfolio](https://www.owensingh.com)
 
 ## 🚨 Disclaimer

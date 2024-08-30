@@ -286,7 +286,8 @@ def main():
             new_chat_id = str(datetime.now().timestamp())
             st.session_state.chat_history[new_chat_id] = {
                 "messages": [],
-                "date": datetime.now().strftime("%Y-%m-%d")
+                "date": datetime.now().strftime("%Y-%m-%d"),
+                "name": "🗨️ New Chat"
             }
             st.session_state.current_chat_id = new_chat_id
             st.session_state.web_scraper_chat = None
@@ -305,12 +306,12 @@ def main():
             for chat_id, chat_data in chats:
                 messages = chat_data['messages']
                 if messages:
-                    button_label = f"{messages[0]['content'][:25]}..."
+                    button_label = chat_data.get('name', f"{messages[0]['content'][:25]}...")
                 else:
-                    button_label = "🗨️ Empty Chat"
-                
+                    button_label = chat_data.get('name', "🗨️ Empty Chat")
+
                 col1, col2 = st.columns([0.85, 0.15]) 
-                
+
                 with col1:
                     if st.button(button_label, key=f"history_{chat_id}", use_container_width=True):
                         st.session_state.current_chat_id = chat_id

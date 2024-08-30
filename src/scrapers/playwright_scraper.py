@@ -17,7 +17,7 @@ class ScraperConfig:
                  headless: bool = True,
                  debug: bool = False,
                  timeout: int = 60000,
-                 wait_for: str = 'networkidle'):
+                 wait_for: str = 'domcontentloaded'): # use networkidle instead of domcontentloaded if you want!
         self.use_stealth = use_stealth
         self.simulate_human = simulate_human
         self.use_custom_headers = use_custom_headers

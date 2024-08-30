@@ -21,6 +21,8 @@ import tiktoken
 import csv
 from bs4 import BeautifulSoup, Comment
 from .scrapers.playwright_scraper import PlaywrightScraper, ScraperConfig
+from urllib.parse import urlparse
+import streamlit as st
 
 class WebExtractor:
     def __init__(self, model_name: str = "gpt-4o-mini", model_kwargs: Dict[str, Any] = None, proxy: Optional[str] = None, headless: bool = True, debug: bool = False):
@@ -59,6 +61,13 @@ class WebExtractor:
 
     def _hash_content(self, content: str) -> str:
         return hashlib.md5(content.encode()).hexdigest()
+
+    def get_website_name(self, url: str) -> str:
+        parsed_url = urlparse(url)
+        domain = parsed_url.netloc
+        if domain.startswith('www.'):
+            domain = domain[4:]
+        return domain.split('.')[0].capitalize()
 
     @lru_cache(maxsize=100)
     async def _cached_api_call(self, content_hash: str, query: str) -> str:
@@ -114,7 +123,11 @@ class WebExtractor:
             pages = parts[1] if len(parts) > 1 and not parts[1].startswith('-') else None
             url_pattern = parts[2] if len(parts) > 2 and not parts[2].startswith('-') else None
             handle_captcha = '-captcha' in user_input.lower()
-            
+
+            website_name = self.get_website_name(url)
+
+            st.session_state.chat_history[st.session_state.current_chat_id]["name"] = website_name
+
             response = await self._fetch_url(url, pages, url_pattern, handle_captcha)
         elif not self.current_content:
             response = "Please provide a URL first before asking for information."

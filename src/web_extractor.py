@@ -25,7 +25,7 @@ from urllib.parse import urlparse
 import streamlit as st
 
 class WebExtractor:
-    def __init__(self, model_name: str = "gpt-4o-mini", model_kwargs: Dict[str, Any] = None, proxy: Optional[str] = None, headless: bool = True, debug: bool = False):
+    def __init__(self, model_name: str = "gpt-4o-mini", model_kwargs: Dict[str, Any] = None, proxy: Optional[str] = None, scraper_config: ScraperConfig = None):
         model_kwargs = model_kwargs or {}
         if isinstance(model_name, str) and model_name.startswith("ollama:"):
             self.model = OllamaModelManager.get_model(model_name[7:])
@@ -33,9 +33,9 @@ class WebExtractor:
             self.model = model_name
         else:
             self.model = Models.get_model(model_name, **model_kwargs)
-        
-        scraper_config = ScraperConfig(headless=headless, debug=debug)
-        self.playwright_scraper = PlaywrightScraper(config=scraper_config)
+
+        self.scraper_config = scraper_config or ScraperConfig()
+        self.playwright_scraper = PlaywrightScraper(config=self.scraper_config)
         self.html_scraper = HTMLScraper()
         self.json_scraper = JSONScraper()
         self.proxy_manager = ProxyManager(proxy)
@@ -116,7 +116,7 @@ class WebExtractor:
             AI: """
         )
 
-    async def process_query(self, user_input: str) -> str:
+    async def process_query(self, user_input: str, progress_callback=None) -> str:
         if user_input.lower().startswith("http"):
             parts = user_input.split(maxsplit=3)
             url = parts[0]
@@ -126,24 +126,34 @@ class WebExtractor:
 
             website_name = self.get_website_name(url)
 
-            st.session_state.chat_history[st.session_state.current_chat_id]["name"] = website_name
+            if progress_callback:
+                progress_callback(f"Fetching content from {website_name}...")
 
-            response = await self._fetch_url(url, pages, url_pattern, handle_captcha)
+            response = await self._fetch_url(url, pages, url_pattern, handle_captcha, progress_callback)
         elif not self.current_content:
             response = "Please provide a URL first before asking for information."
         else:
+            if progress_callback:
+                progress_callback("Extracting information...")
             response = await self._extract_info(user_input)
 
         self.conversation_history.append(f"Human: {user_input}")
         self.conversation_history.append(f"AI: {response}")
         return response
 
-    async def _fetch_url(self, url: str, pages: Optional[str] = None, url_pattern: Optional[str] = None, handle_captcha: bool = False) -> str:
+    async def _fetch_url(self, url: str, pages: Optional[str] = None, url_pattern: Optional[str] = None, handle_captcha: bool = False, progress_callback=None) -> str:
         self.current_url = url
         proxy = await self.proxy_manager.get_proxy()
 
+        if progress_callback:
+            progress_callback("Fetching webpage content...")
+
         contents = await self.playwright_scraper.fetch_content(url, proxy, pages, url_pattern, handle_captcha)
         self.current_content = "\n".join(contents)
+        
+        if progress_callback:
+            progress_callback("Preprocessing content...")
+        
         self.preprocessed_content = self._preprocess_content(self.current_content)
 
         new_hash = self._hash_content(self.preprocessed_content)

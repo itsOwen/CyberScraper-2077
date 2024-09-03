@@ -62,15 +62,30 @@ class PlaywrightScraper(BaseScraper):
                     await self.apply_stealth_settings(page)
                 await self.set_browser_features(page)
 
+                if handle_captcha:
+                    await self.handle_captcha(page, url)
+                
                 contents = await self.scrape_multiple_pages(page, url, pages, url_pattern)
             except Exception as e:
                 self.logger.error(f"Error during scraping: {str(e)}")
                 contents = [f"Error: {str(e)}"]
             finally:
-                await browser.close()
-                self.logger.info("Browser closed after scraping.")
+                if not self.config.use_current_browser:
+                    await browser.close()
+                    self.logger.info("Browser closed after scraping.")
 
         return contents
+
+    async def handle_captcha(self, page: Page, url: str):
+        self.logger.info("Waiting for user to solve CAPTCHA...")
+        await page.goto(url, wait_until=self.config.wait_for, timeout=self.config.timeout)
+        
+        print("Please solve the CAPTCHA in the browser window.")
+        print("Once solved, press Enter in this console to continue...")
+        input()
+        
+        await page.wait_for_load_state('networkidle')
+        self.logger.info("CAPTCHA handling completed.")
 
     async def launch_and_connect_to_chrome(self, playwright):
         if self.chrome_process is None:
@@ -193,17 +208,6 @@ class PlaywrightScraper(BaseScraper):
                 'Sec-Fetch-User': '?1',
                 'Upgrade-Insecure-Requests': '1'
             })
-
-    async def handle_captcha(self, page: Page, url: str):
-        self.logger.info("Waiting for user to solve CAPTCHA...")
-        await page.goto(url, wait_until=self.config.wait_for, timeout=self.config.timeout)
-        
-        print("Please solve the CAPTCHA in the browser window.")
-        print("Once solved, press Enter in this console to continue...")
-        input()
-        
-        await page.wait_for_load_state('networkidle')
-        self.logger.info("CAPTCHA handling completed.")
 
     async def scrape_multiple_pages(self, page: Page, base_url: str, pages: Optional[str] = None, url_pattern: Optional[str] = None) -> List[str]:
         contents = []

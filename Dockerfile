@@ -35,6 +35,9 @@ RUN echo '#!/bin/bash\n\
 if [ ! -z "$OPENAI_API_KEY" ]; then\n\
     export OPENAI_API_KEY=$OPENAI_API_KEY\n\
 fi\n\
+if [ ! -z "$GOOGLE_API_KEY" ]; then\n\
+    export GOOGLE_API_KEY=$GOOGLE_API_KEY\n\
+fi\n\
 streamlit run main.py\n\
 ' > /app/run.sh
 

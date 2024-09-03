@@ -17,6 +17,7 @@ from src.scrapers.playwright_scraper import ScraperConfig
 import time
 from urllib.parse import urlparse
 import atexit
+import os
 
 def handle_oauth_callback():
     if 'code' in st.query_params:
@@ -322,7 +323,7 @@ def main():
 
         # Model selection
         st.subheader("Select Model")
-        default_models = ["gpt-4o-mini", "gpt-3.5-turbo"]
+        default_models = ["gpt-4o-mini", "gpt-3.5-turbo", "gemini-1.5-flash", "gemini-pro"]
         ollama_models = st.session_state.get('ollama_models', [])
         all_models = default_models + [f"ollama:{model}" for model in ollama_models]
         selected_model = st.selectbox("Choose a model", all_models, index=all_models.index(st.session_state.selected_model) if st.session_state.selected_model in all_models else 0)
@@ -331,6 +332,13 @@ def main():
             st.session_state.selected_model = selected_model
             st.session_state.web_scraper_chat = None
             st.rerun()
+
+        # Display warnings for missing API keys
+        if not os.getenv("OPENAI_API_KEY") and any(model.startswith(("gpt-", "text-")) for model in all_models):
+            st.warning("OpenAI API Key is not set. Some models may not be available.")
+        
+        if not os.getenv("GOOGLE_API_KEY") and any(model.startswith("gemini-") for model in all_models):
+            st.warning("Google API Key is not set. Gemini models may not be available.")
 
         st.session_state.use_current_browser = st.checkbox("Use Current Browser (No Docker)", value=False, help="Works Natively, Doesn't Work with Docker. if a website is blocking your browser, you can use this option to use the current browser instead of opening a new one.")
 

@@ -21,3 +21,5 @@ requests
 google_auth_oauthlib
 google-auth-httplib2 
 google-api-python-client
+google-generativeai
+langchain-google-genai

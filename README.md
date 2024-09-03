@@ -122,7 +122,7 @@ If you prefer to use Docker, follow these steps to set up and run CyberScraper 2
      ```
    - With Gemini API key:
      ```bash
-     docker run -p 8501:8501 -e GOOGLE_API_KEY=your_google_key cyberscraper-2077
+     docker run -p 8501:8501 -e GOOGLE_API_KEY="your-actual-api-key" cyberscraper-2077
      ```
 
 5. Open your browser and navigate to `http://localhost:8501`.

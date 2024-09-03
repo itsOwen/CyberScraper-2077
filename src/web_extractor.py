@@ -1,4 +1,3 @@
-import asyncio
 from typing import Dict, Any, Optional, List, Tuple, Union
 import json
 import pandas as pd
@@ -14,7 +13,7 @@ from .scrapers.html_scraper import HTMLScraper
 from .scrapers.json_scraper import JSONScraper
 from .utils.proxy_manager import ProxyManager
 from .utils.markdown_formatter import MarkdownFormatter
-from langchain.prompts import PromptTemplate
+from .prompts import get_prompt_for_model
 from langchain.schema.runnable import RunnableSequence
 from langchain.text_splitter import RecursiveCharacterTextSplitter
 import tiktoken
@@ -23,19 +22,26 @@ from bs4 import BeautifulSoup, Comment
 from .scrapers.playwright_scraper import PlaywrightScraper, ScraperConfig
 from urllib.parse import urlparse
 import streamlit as st
+import os
+import google.generativeai as genai
+from langchain_google_genai import ChatGoogleGenerativeAI
 
 class WebExtractor:
-    def __init__(self, model_name: str = "gpt-4o-mini", model_kwargs: Dict[str, Any] = None, proxy: Optional[str] = None, headless: bool = True, debug: bool = False):
+    def __init__(self, model_name: str = "gpt-4o-mini", model_kwargs: Dict[str, Any] = None, proxy: Optional[str] = None, scraper_config: ScraperConfig = None):
         model_kwargs = model_kwargs or {}
         if isinstance(model_name, str) and model_name.startswith("ollama:"):
             self.model = OllamaModelManager.get_model(model_name[7:])
         elif isinstance(model_name, OllamaModel):
             self.model = model_name
+        elif model_name.startswith("gemini-"):
+            genai.configure(api_key=os.getenv("GOOGLE_API_KEY"))
+            self.model = ChatGoogleGenerativeAI(model=model_name, **model_kwargs)
         else:
             self.model = Models.get_model(model_name, **model_kwargs)
         
-        scraper_config = ScraperConfig(headless=headless, debug=debug)
-        self.playwright_scraper = PlaywrightScraper(config=scraper_config)
+        self.model_name = model_name
+        self.scraper_config = scraper_config or ScraperConfig()
+        self.playwright_scraper = PlaywrightScraper(config=self.scraper_config)
         self.html_scraper = HTMLScraper()
         self.json_scraper = JSONScraper()
         self.proxy_manager = ProxyManager(proxy)
@@ -71,52 +77,17 @@ class WebExtractor:
 
     @lru_cache(maxsize=100)
     async def _cached_api_call(self, content_hash: str, query: str) -> str:
+        prompt_template = get_prompt_for_model(self.model_name)
+        full_prompt = prompt_template.format(webpage_content=self.preprocessed_content, query=query)
+        
         if isinstance(self.model, OllamaModel):
-            prompt_template = self._prepare_prompt(self.preprocessed_content, query)
-            full_prompt = prompt_template.format(webpage_content=self.preprocessed_content, query=query)
             return await self.model.generate(prompt=full_prompt)
         else:
-            prompt_template = self._prepare_prompt(self.preprocessed_content, query)
             chain = prompt_template | self.model
             response = await chain.ainvoke({"webpage_content": self.preprocessed_content, "query": query})
             return response.content
 
-    def _prepare_prompt(self, content: str, query: str) -> PromptTemplate:
-        return PromptTemplate(
-            input_variables=["webpage_content", "query"],
-            template="""You are an AI assistant that helps with web scraping tasks. 
-            Based on the following preprocessed webpage content and the user's request, extract the relevant information.
-            Always present the data as a JSON array of objects, regardless of the user's requested format.
-            Each object in the array should represent one item or row of data.
-            Use the following format without any commentary text, provide only the format and nothing else:
-            
-            [
-            {{
-                "field1": "value1",
-                "field2": "value2"
-            }},
-            {{
-                "field1": "value1",
-                "field2": "value2"
-            }}
-            ]
-
-            If the user asks for information about the data on the webpage, explain about the data in bullet points and how can we use it, and provide further information if asked.
-            Include all requested fields. If a field is not found, use "N/A" as the value.
-            Do not invent or fabricate any data. If the information is not present, use "N/A".
-            If the user specifies a number of entries to extract, limit your response to that number.
-            If the user asks for all extractable data, provide all entries you can find.
-            Ensure that the extracted data accurately reflects the content of the webpage.
-            Use appropriate field names based on the webpage content and the user's query.
-            
-            Preprocessed webpage content:
-            {webpage_content}
-            
-            Human: {query}
-            AI: """
-        )
-
-    async def process_query(self, user_input: str) -> str:
+    async def process_query(self, user_input: str, progress_callback=None) -> str:
         if user_input.lower().startswith("http"):
             parts = user_input.split(maxsplit=3)
             url = parts[0]
@@ -126,24 +97,34 @@ class WebExtractor:
 
             website_name = self.get_website_name(url)
 
-            st.session_state.chat_history[st.session_state.current_chat_id]["name"] = website_name
+            if progress_callback:
+                progress_callback(f"Fetching content from {website_name}...")
 
-            response = await self._fetch_url(url, pages, url_pattern, handle_captcha)
+            response = await self._fetch_url(url, pages, url_pattern, handle_captcha, progress_callback)
         elif not self.current_content:
             response = "Please provide a URL first before asking for information."
         else:
+            if progress_callback:
+                progress_callback("Extracting information...")
             response = await self._extract_info(user_input)
 
         self.conversation_history.append(f"Human: {user_input}")
         self.conversation_history.append(f"AI: {response}")
         return response
 
-    async def _fetch_url(self, url: str, pages: Optional[str] = None, url_pattern: Optional[str] = None, handle_captcha: bool = False) -> str:
+    async def _fetch_url(self, url: str, pages: Optional[str] = None, url_pattern: Optional[str] = None, handle_captcha: bool = False, progress_callback=None) -> str:
         self.current_url = url
         proxy = await self.proxy_manager.get_proxy()
 
+        if progress_callback:
+            progress_callback("Fetching webpage content...")
+
         contents = await self.playwright_scraper.fetch_content(url, proxy, pages, url_pattern, handle_captcha)
         self.current_content = "\n".join(contents)
+        
+        if progress_callback:
+            progress_callback("Preprocessing content...")
+        
         self.preprocessed_content = self._preprocess_content(self.current_content)
 
         new_hash = self._hash_content(self.preprocessed_content)

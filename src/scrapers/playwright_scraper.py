@@ -6,6 +6,11 @@ import random
 import logging
 import re
 from urllib.parse import urlparse, parse_qs, urlencode, urlunparse
+import platform
+import subprocess
+import time
+import os
+import tempfile
 
 class ScraperConfig:
     def __init__(self,
@@ -16,8 +21,11 @@ class ScraperConfig:
                  bypass_cloudflare: bool = True,
                  headless: bool = True,
                  debug: bool = False,
-                 timeout: int = 60000,
-                 wait_for: str = 'domcontentloaded'): # use networkidle instead of domcontentloaded if you want!
+                 timeout: int = 30000,
+                 wait_for: str = 'domcontentloaded',
+                 use_current_browser: bool = False,
+                 max_retries: int = 3,
+                 delay_after_load: int = 2):
         self.use_stealth = use_stealth
         self.simulate_human = simulate_human
         self.use_custom_headers = use_custom_headers
@@ -27,37 +35,109 @@ class ScraperConfig:
         self.debug = debug
         self.timeout = timeout
         self.wait_for = wait_for
+        self.use_current_browser = use_current_browser
+        self.max_retries = max_retries
+        self.delay_after_load = delay_after_load
 
 class PlaywrightScraper(BaseScraper):
     def __init__(self, config: ScraperConfig = ScraperConfig()):
         self.logger = logging.getLogger(__name__)
         self.logger.setLevel(logging.DEBUG if config.debug else logging.INFO)
         self.config = config
+        self.chrome_process = None
+        self.temp_user_data_dir = None
 
     async def fetch_content(self, url: str, proxy: Optional[str] = None, pages: Optional[str] = None, url_pattern: Optional[str] = None, handle_captcha: bool = False) -> List[str]:
         async with async_playwright() as p:
-            browser = await self.launch_browser(p, proxy, handle_captcha)
-            context = await self.create_context(browser, proxy)
-            page = await context.new_page()
-
-            if self.config.use_stealth:
-                await self.apply_stealth_settings(page)
-            await self.set_browser_features(page)
+            if self.config.use_current_browser:
+                browser = await self.launch_and_connect_to_chrome(p)
+            else:
+                browser = await self.launch_browser(p, proxy, handle_captcha)
 
             try:
-                if handle_captcha:
-                    await self.handle_captcha(page, url)
+                context = await self.create_context(browser, proxy)
+                page = await context.new_page()
+
+                if self.config.use_stealth:
+                    await self.apply_stealth_settings(page)
+                await self.set_browser_features(page)
+
                 contents = await self.scrape_multiple_pages(page, url, pages, url_pattern)
             except Exception as e:
                 self.logger.error(f"Error during scraping: {str(e)}")
                 contents = [f"Error: {str(e)}"]
             finally:
-                if self.config.debug:
-                    self.logger.info("Scraping completed. Keeping browser open for debugging.")
-                    await asyncio.sleep(30)
                 await browser.close()
+                self.logger.info("Browser closed after scraping.")
 
-            return contents
+        return contents
+
+    async def launch_and_connect_to_chrome(self, playwright):
+        if self.chrome_process is None:
+            self.temp_user_data_dir = tempfile.mkdtemp(prefix="chrome_debug_profile_")
+            chrome_executable = self.get_chrome_executable()
+            command = [
+                chrome_executable,
+                f"--user-data-dir={self.temp_user_data_dir}",
+                "--remote-debugging-port=9222",
+                "--no-first-run",
+                "--no-default-browser-check"
+            ]
+            self.chrome_process = subprocess.Popen(command)
+            self.logger.info("Launched Chrome with remote debugging.")
+
+        for _ in range(30):
+            try:
+                browser = await playwright.chromium.connect_over_cdp("http://localhost:9222")
+                self.logger.info("Successfully connected to Chrome.")
+                return browser
+            except Exception as e:
+                self.logger.debug(f"Connection attempt failed: {str(e)}")
+                await asyncio.sleep(1)
+        
+        raise Exception("Failed to connect to Chrome after 30 seconds")
+
+    def get_chrome_executable(self):
+        system = platform.system()
+        if system == "Darwin":  # macOS
+            return "/Applications/Google Chrome.app/Contents/MacOS/Google Chrome"
+        elif system == "Linux":
+            return "google-chrome"
+        else:
+            raise NotImplementedError(f"Unsupported operating system: {system}")
+
+    def __del__(self):
+        if self.chrome_process:
+            self.chrome_process.terminate()
+            self.chrome_process.wait()
+            self.logger.info("Chrome process terminated.")
+        if self.temp_user_data_dir:
+            import shutil
+            shutil.rmtree(self.temp_user_data_dir, ignore_errors=True)
+            self.logger.info(f"Temporary user data directory removed: {self.temp_user_data_dir}")
+
+    async def connect_to_current_browser(self, playwright):
+        system = platform.system()
+        if system == "Darwin":
+            subprocess.Popen(["open", "-a", "Google Chrome", "--args", "--remote-debugging-port=9222"])
+        elif system == "Linux":
+            subprocess.Popen(["google-chrome", "--remote-debugging-port=9222"])
+        elif system == "Windows":
+            subprocess.Popen(["start", "chrome", "--remote-debugging-port=9222"], shell=True)
+        else:
+            raise NotImplementedError(f"Connecting to current browser is not implemented for {system}")
+
+        self.logger.info("Waiting for browser to start...")
+        for _ in range(30):
+            try:
+                browser = await playwright.chromium.connect_over_cdp("http://localhost:9222")
+                self.logger.info("Successfully connected to the browser.")
+                return browser
+            except Exception as e:
+                self.logger.debug(f"Connection attempt failed: {str(e)}")
+                await asyncio.sleep(1)
+        
+        raise Exception("Failed to connect to the current browser after 30 seconds")
 
     async def launch_browser(self, playwright, proxy: Optional[str] = None, handle_captcha: bool = False) -> Browser:
         return await playwright.chromium.launch(
@@ -135,9 +215,6 @@ class PlaywrightScraper(BaseScraper):
             # Single page scraping
             self.logger.info(f"Scraping single page: {base_url}")
             content = await self.navigate_and_get_content(page, base_url)
-            if self.config.bypass_cloudflare and "Cloudflare" in content and "ray ID" in content.lower():
-                self.logger.info("Cloudflare detected, attempting to bypass...")
-                content = await self.bypass_cloudflare(page, base_url)
             contents.append(content)
         else:
             # Multiple page scraping
@@ -147,23 +224,28 @@ class PlaywrightScraper(BaseScraper):
                 self.logger.info(f"Scraping page {page_num}: {current_url}")
 
                 content = await self.navigate_and_get_content(page, current_url)
-                if self.config.bypass_cloudflare and "Cloudflare" in content and "ray ID" in content.lower():
-                    self.logger.info("Cloudflare detected, attempting to bypass...")
-                    content = await self.bypass_cloudflare(page, current_url)
-
                 contents.append(content)
 
-                await asyncio.sleep(random.uniform(1, 3))
+                if page_num < len(page_numbers):
+                    await asyncio.sleep(random.uniform(1, 2))
 
         return contents
 
     async def navigate_and_get_content(self, page: Page, url: str) -> str:
-        await page.goto(url, wait_until=self.config.wait_for, timeout=self.config.timeout)
-        if self.config.simulate_human:
-            await self.simulate_human_behavior(page)
-        else:
-            await asyncio.sleep(2)
-        return await page.content()
+        try:
+            self.logger.info(f"Navigating to {url}")
+            await page.goto(url, wait_until=self.config.wait_for, timeout=self.config.timeout)
+            self.logger.info(f"Successfully loaded {url}")
+            
+            await asyncio.sleep(self.config.delay_after_load)
+            
+            self.logger.info("Extracting page content")
+            content = await page.content()
+            self.logger.info(f"Successfully extracted content (length: {len(content)})")
+            return content
+        except Exception as e:
+            self.logger.error(f"Error navigating to {url}: {str(e)}")
+            return f"Error: Failed to load {url}. {str(e)}"
 
     async def bypass_cloudflare(self, page: Page, url: str) -> str:
         max_retries = 3

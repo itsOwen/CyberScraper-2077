@@ -17,7 +17,7 @@
 
 ## 🔍 About
 
-CyberScraper 2077 is not just another web scraping tool – it's a glimpse into the future of data extraction. Born from the neon-lit streets of a cyberpunk world, this AI-powered scraper uses OpenAI to slice through the web's defenses, extracting the data you need with unparalleled precision and style.
+CyberScraper 2077 is not just another web scraping tool – it's a glimpse into the future of data extraction. Born from the neon-lit streets of a cyberpunk world, this AI-powered scraper uses OpenAI, Gemini and LocalLLM Models to slice through the web's defenses, extracting the data you need with unparalleled precision and style.
 
 Whether you're a corpo data analyst, a street-smart netrunner, or just someone looking to pull information from the digital realm, CyberScraper 2077 has got you covered.
 
@@ -28,18 +28,18 @@ Whether you're a corpo data analyst, a street-smart netrunner, or just someone l
 ## ✨ Features
 
 - 🤖 **AI-Powered Extraction**: Utilizes cutting-edge AI models to understand and parse web content intelligently.
-- 💻 **Sleek Streamlit Interface**: User-friendly GUI that even a chrome-armed street samurai could navigate.
+- 🖥️ **Sleek Streamlit Interface**: User-friendly GUI that even a chrome-armed street samurai could navigate.
 - 🔄 **Multi-Format Support**: Export your data in JSON, CSV, HTML, SQL or Excel – whatever fits your cyberdeck.
-- 🌐 **Stealth Mode**: Implemented stealth mode parameters that helps it from getting detected as bot.
-- 🤖 **Ollama Support**: Use a huge library of open source LLMs.
-- 🚀 **Async Operations**: Lightning-fast scraping that would make a Trauma Team jealous.
+- 🕵️ **Stealth Mode**: Implemented stealth mode parameters that help avoid detection as a bot.
+- 🦙 **Ollama Support**: Use a huge library of open source LLMs.
+- ⚡ **Async Operations**: Lightning-fast scraping that would make a Trauma Team jealous.
 - 🧠 **Smart Parsing**: Structures scraped content as if it was extracted straight from the engram of a master netrunner.
-- 🛡️ **Ethical Scraping**: Respects robots.txt and site policies. We may be in 2077, but we still have standards.
-- 📄 **Caching**: We implemented content-based and query-based caching using LRU cache and a custom dictionary to reduce redundant API calls.
-- ✅ **Upload to Google Sheets**: Now you can easily upload your extract csv data to google sheets with one click.
-- 🤖 **Bypass Captcha**: Bypass captcha by using the -captcha at the end of the url. (Currently only works natively, doesn't work on docker)
-- 🌐 **Proxy Mode (Coming Soon)**: Built-in proxy support to keep you ghosting through the net.
-- 🛡️ **Navigate through the Pages (BETA)**: Navigate through the webpage and scrap the data from different pages. 
+- 💾 **Caching**: Implemented content-based and query-based caching using LRU cache and a custom dictionary to reduce redundant API calls.
+- 📊 **Upload to Google Sheets**: Now you can easily upload your extracted CSV data to Google Sheets with one click.
+- 🛡️ **Bypass Captcha**: Bypass captcha by using the -captcha at the end of the URL. (Currently only works natively, doesn't work on Docker)
+- 🌐 **Current Browser**: The current browser feature uses your local browser instance which will help you bypass 99% of bot detections. (Only use when necessary)
+- 🔒 **Proxy Mode (Coming Soon)**: Built-in proxy support to keep you ghosting through the net.
+- 🧭 **Navigate through the Pages (BETA)**: Navigate through the webpage and scrape data from different pages. 
 
 ## 🎥 Demo
 
@@ -75,16 +75,18 @@ Please follow the Docker Container Guide given below, As I won't be able to main
    playwright install
    ```
 
-5. Set OpenAI Key in your enviornment:
+5. Set OpenAI & Gemini Key in your enviornment:
 
    Linux/Mac:
    ```bash
    export OPENAI_API_KEY="your-api-key-here"
+
+   export GOOGLE_API_KEY="your-api-key-here"
    ```
 
 6. If you want to use the Ollama:
 
-Note: I only recommend using OpenAI API as GPT4o-mini is really good at following instructions, If you are using open-source LLMs make sure you have a good system as the speed of the data generation/presentation depends on how good your system is in running the LLM and also you may have to fine-tune the prompt and add some additional filters yourself.
+Note: I only recommend using OpenAI and Gemini API as GPT4o-mini is really good at following instructions, If you are using open-source LLMs make sure you have a good system as the speed of the data generation/presentation depends on how good your system is in running the LLM and also you may have to fine-tune the prompt and add some additional filters yourself.
    ```bash
    1. Setup Ollama using `pip install ollama`
    2. Download the Ollama from the official website: https://ollama.com/download
@@ -110,13 +112,17 @@ If you prefer to use Docker, follow these steps to set up and run CyberScraper 2
    ```
 
 4. Run the container:
-   - Without OpenAI API key:
+   - Without API key:
      ```bash
      docker run -p 8501:8501 cyberscraper-2077
      ```
    - With OpenAI API key:
      ```bash
      docker run -p 8501:8501 -e OPENAI_API_KEY="your-actual-api-key" cyberscraper-2077
+     ```
+   - With Gemini API key:
+     ```bash
+     docker run -p 8501:8501 -e GOOGLE_API_KEY=your_google_key cyberscraper-2077
      ```
 
 5. Open your browser and navigate to `http://localhost:8501`.

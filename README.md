@@ -43,13 +43,13 @@ Whether you're a corpo data analyst, a street-smart netrunner, or just someone l
 
 ## 🎥 Demo
 
-Check out our Redisgned and Improved Version of CyberScraper-2077 with more functionality [YouTube video](https://www.youtube.com/watch?v=TWyensVOIvs) for a full walkthrough of CyberScraper 2077's capabilities.
+Check out our Redesigned and Improved Version of CyberScraper-2077 with more functionality [YouTube video](https://www.youtube.com/watch?v=TWyensVOIvs) for a full walkthrough of CyberScraper 2077's capabilities.
 
 Check out our first build (Old Video) [YouTube video](https://www.youtube.com/watch?v=iATSd5Ijl4M)
 
 ## 🪟 For Windows Users
 
-Please follow the Docker Container Guide given below, As I won't be able to maintain another version for windows system.
+Please follow the Docker Container Guide given below, as I won't be able to maintain another version for Windows systems.
 
 ## 🛠 Installation
 
@@ -75,7 +75,7 @@ Please follow the Docker Container Guide given below, As I won't be able to main
    playwright install
    ```
 
-5. Set OpenAI & Gemini Key in your enviornment:
+5. Set OpenAI & Gemini Key in your environment:
 
    Linux/Mac:
    ```bash
@@ -84,12 +84,12 @@ Please follow the Docker Container Guide given below, As I won't be able to main
    export GOOGLE_API_KEY="your-api-key-here"
    ```
 
-6. If you want to use the Ollama:
+6. If you want to use Ollama:
 
-Note: I only recommend using OpenAI and Gemini API as GPT4o-mini is really good at following instructions, If you are using open-source LLMs make sure you have a good system as the speed of the data generation/presentation depends on how good your system is in running the LLM and also you may have to fine-tune the prompt and add some additional filters yourself.
+Note: I only recommend using OpenAI and Gemini API as these models are really good at following instructions. If you are using open-source LLMs, make sure you have a good system as the speed of the data generation/presentation depends on how well your system can run the LLM. You may also have to fine-tune the prompt and add some additional filters yourself.
    ```bash
    1. Setup Ollama using `pip install ollama`
-   2. Download the Ollama from the official website: https://ollama.com/download
+   2. Download Ollama from the official website: https://ollama.com/download
    3. Now type: ollama pull llama3.1 or whatever LLM you want to use.
    4. Now follow the rest of the steps below.
    ```
@@ -167,9 +167,9 @@ Note: Ensure that your firewall allows connections to port 11434 for Ollama.
 
 3. Enter the URL of the site you want to scrape or ask a question about the data you need.
 
-4. Ask the chatbot to extract the data in any format, Select whatever data you want to export or even everything from the webpage.
+4. Ask the chatbot to extract the data in any format. Select whatever data you want to export or even everything from the webpage.
 
-4. Watch as CyberScraper 2077 tears through the net, extracting your data faster than you can say "flatline"!
+5. Watch as CyberScraper 2077 tears through the net, extracting your data faster than you can say "flatline"!
 
 ## 🌐 Multi-Page Scraping (BETA)
 
@@ -179,7 +179,7 @@ CyberScraper 2077 now supports multi-page scraping, allowing you to extract data
 
 ### How to Use Multi-Page Scraping
 
-I suggest you enter the URL structure every time If you want to scrape multiple pages so it can detect the URL structure easily, It detects nearly all URL types.
+I suggest you enter the URL structure every time if you want to scrape multiple pages so it can detect the URL structure easily. It detects nearly all URL types.
 
 1. **Basic Usage**:
    To scrape multiple pages, use the following format when entering the URL:
@@ -221,7 +221,7 @@ I suggest you enter the URL structure every time If you want to scrape multiple 
 URL Example : "https://news.ycombinator.com/?p=1 1-3 or 1,2,3,4"
 ```
 
-If you want to scrape a specific page, Just enter the query please scrape page number 1 or 2, If you want to scrape all pages, Simply give a query like scrape all pages in csv or whatever format you want.
+If you want to scrape a specific page, just enter the query "please scrape page number 1 or 2". If you want to scrape all pages, simply give a query like "scrape all pages in csv" or whatever format you want.
 
 ### Handling Errors
 
@@ -264,7 +264,7 @@ Your input is crucial in helping us refine and stabilize this feature for future
 
 ## Adjusting PlaywrightScraper Settings (optional)
 
-Customize the `PlaywrightScraper` settings to fit your scraping needs, If some websites are giving you issues, You might want to check the behaviour of the website:
+Customize the `PlaywrightScraper` settings to fit your scraping needs. If some websites are giving you issues, you might want to check the behavior of the website:
 
 ```bash
 use_stealth: bool = True,
@@ -276,7 +276,7 @@ bypass_cloudflare: bool = True:
 
 Adjust these settings based on your target website and environment for optimal results.
 
-You can also bypass the captcha using the ```-captcha``` parameter at the end of the URL, the browser window will popup, complete the capatcha and go back to your terminal window, Press enter and the bot will complete it's task.
+You can also bypass the captcha using the ```-captcha``` parameter at the end of the URL. The browser window will pop up, complete the captcha, and go back to your terminal window. Press enter and the bot will complete its task.
 
 ## 🤝 Contributing
 
@@ -292,7 +292,7 @@ Ran into a glitch in the matrix? Let me know by adding the issue to this repo so
 A: CyberScraper 2077 is designed for ethical web scraping. Always ensure you have the right to scrape a website and respect their robots.txt file.
 
 **Q: Can I use this for commercial purposes?**
-A: Yes, under the terms of the MIT License. But remember, in Night City, there's always a price to pay, Just kidding!
+A: Yes, under the terms of the MIT License. But remember, in Night City, there's always a price to pay. Just kidding!
 
 ## 📄 License
 
@@ -325,6 +325,8 @@ Listen up, choombas! Before you jack into this code, you better understand the r
 7. We reserve the right to modify or discontinue the software at any time without notice.
 
 Remember, samurai: In the dark future of the NET, knowledge is power, but it's also a double-edged sword. Use this tool wisely, and may your connection always be strong and your firewalls impenetrable. Stay frosty out there in the digital frontier.
+
+![Alt](https://repobeats.axiom.co/api/embed/80758496e19179f355d6d71c180db7aca66d396b.svg "Repobeats analytics image")
 
 ---
 

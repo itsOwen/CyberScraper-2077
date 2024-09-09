@@ -53,6 +53,8 @@ Please follow the Docker Container Guide given below, as I won't be able to main
 
 ## 🛠 Installation
 
+**Note: CyberScraper 2077 requires Python 3.10 or higher.**
+
 1. Clone this repository:
    ```bash
    git clone https://github.com/itsOwen/CyberScraper-2077.git

@@ -171,7 +171,7 @@ def get_last_url_from_chat(messages):
 
 def initialize_web_scraper_chat(url=None):
     if st.session_state.selected_model.startswith("ollama:"):
-        model = OllamaModel(st.session_state.selected_model[7:])
+        model = st.session_state.selected_model
     else:
         model = st.session_state.selected_model
     

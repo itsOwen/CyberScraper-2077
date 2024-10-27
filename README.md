@@ -324,7 +324,9 @@ If you encounter issues with Tor scraping:
 
 ### Example Usage
 
-<p align="center">https://i.postimg.cc/Jz0w4Kry/Screenshot-2024-10-27-at-1-25-32-AM.png</p>
+<p align="center">
+  <img src="https://i.postimg.cc/3JvhgtMP/cyberscraper-onion.png" alt="CyberScraper 2077 Onion Scrape">
+</p>
 
 ## Setup Google Sheets Authentication:
 

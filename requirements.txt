@@ -23,3 +23,5 @@ google-auth-httplib2
 google-api-python-client
 google-generativeai
 langchain-google-genai
+PySocks>=1.7.1
+requests[socks]>=2.28.1

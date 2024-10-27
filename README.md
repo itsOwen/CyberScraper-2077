@@ -30,6 +30,7 @@ Whether you're a corpo data analyst, a street-smart netrunner, or just someone l
 - 🤖 **AI-Powered Extraction**: Utilizes cutting-edge AI models to understand and parse web content intelligently.
 - 🖥️ **Sleek Streamlit Interface**: User-friendly GUI that even a chrome-armed street samurai could navigate.
 - 🔄 **Multi-Format Support**: Export your data in JSON, CSV, HTML, SQL or Excel – whatever fits your cyberdeck.
+- 🧅 **Tor Network Support**: Safely scrape .onion sites through the Tor network with automatic routing and security features.
 - 🕵️ **Stealth Mode**: Implemented stealth mode parameters that help avoid detection as a bot.
 - 🦙 **Ollama Support**: Use a huge library of open source LLMs.
 - ⚡ **Async Operations**: Lightning-fast scraping that would make a Trauma Team jealous.
@@ -241,6 +242,89 @@ As this feature is in beta, we highly value your feedback. If you encounter any 
 3. Share any error messages or unexpected behaviors you observed
 
 Your input is crucial in helping us refine and stabilize this feature for future releases.
+
+## 🧅 Tor Network Scraping
+
+> **Note**: The Tor network scraping feature allows you to access and scrape .onion sites. This feature requires additional setup and should be used responsibly and legally.
+
+CyberScraper 2077 now supports scraping .onion sites through the Tor network, allowing you to access and extract data from the dark web safely and anonymously. This feature is perfect for researchers, security analysts, and investigators who need to gather information from Tor hidden services.
+
+### Prerequisites
+
+1. Install Tor on your system:
+   ```bash
+   # Ubuntu/Debian
+   sudo apt install tor
+   
+   # macOS (using Homebrew)
+   brew install tor
+   
+   # Start the Tor service
+   sudo service tor start  # on Linux
+   brew services start tor # on macOS
+   ```
+
+2. Install additional Python packages:
+   ```bash
+   pip install PySocks requests[socks]
+   ```
+
+### Using Tor Scraping
+
+1. **Basic Usage**:
+   Simply enter an .onion URL, and CyberScraper will automatically detect and route it through the Tor network:
+   ```
+   http://example123abc.onion
+   ```
+
+2. **Safety Features**:
+   - Automatic .onion URL detection
+   - Built-in connection verification
+   - Tor Browser-like request headers
+   - Automatic circuit isolation
+
+### Configuration Options
+
+You can customize the Tor scraping behavior by adjusting the following settings:
+```python
+tor_config = TorConfig(
+    socks_port=9050,          # Default Tor SOCKS port
+    circuit_timeout=10,        # Timeout for circuit creation
+    auto_renew_circuit=True,   # Automatically renew Tor circuit
+    verify_connection=True     # Verify Tor connection before scraping
+)
+```
+
+### Security Considerations
+
+- Always ensure you're complying with local laws and regulations
+- Use a VPN in addition to Tor for extra security
+- Be patient as Tor connections can be slower than regular web scraping
+- Avoid sending personal or identifying information through Tor
+- Some .onion sites may be offline or unreachable
+
+### Docker Support
+
+For Docker users, add these additional flags to enable Tor support:
+```bash
+docker run -p 8501:8501 \
+  --network="host" \
+  -e OPENAI_API_KEY="your-api-key" \
+  cyberscraper-2077
+```
+
+### Troubleshooting
+
+If you encounter issues with Tor scraping:
+- Verify Tor service is running (`sudo service tor status`)
+- Check SOCKS port availability (`netstat -an | grep 9050`)
+- Ensure proper Tor installation (`tor --version`)
+- Verify internet connectivity
+- Check firewall settings
+
+### Example Usage
+
+<p align="center">https://i.postimg.cc/Jz0w4Kry/Screenshot-2024-10-27-at-1-25-32-AM.png</p>
 
 ## Setup Google Sheets Authentication:
 

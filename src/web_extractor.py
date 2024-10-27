@@ -25,9 +25,14 @@ import streamlit as st
 import os
 import google.generativeai as genai
 from langchain_google_genai import ChatGoogleGenerativeAI
+from .scrapers.tor.tor_scraper import TorScraper
+from .scrapers.tor.tor_config import TorConfig
+from .scrapers.tor.exceptions import TorException
 
 class WebExtractor:
-    def __init__(self, model_name: str = "gpt-4o-mini", model_kwargs: Dict[str, Any] = None, proxy: Optional[str] = None, scraper_config: ScraperConfig = None):
+    def __init__(self, model_name: str = "gpt-4o-mini", model_kwargs: Dict[str, Any] = None, 
+                 proxy: Optional[str] = None, scraper_config: ScraperConfig = None,
+                 tor_config: TorConfig = None):
         model_kwargs = model_kwargs or {}
         if isinstance(model_name, str) and model_name.startswith("ollama:"):
             self.model = OllamaModelManager.get_model(model_name[7:])
@@ -58,6 +63,8 @@ class WebExtractor:
         self.max_tokens = 128000 if model_name == "gpt-4o-mini" else 16385
         self.query_cache = {}
         self.content_hash = None
+        self.tor_config = tor_config or TorConfig()
+        self.tor_scraper = TorScraper(self.tor_config)
 
     @staticmethod
     def num_tokens_from_string(string: str) -> int:
@@ -112,29 +119,48 @@ class WebExtractor:
         self.conversation_history.append(f"AI: {response}")
         return response
 
-    async def _fetch_url(self, url: str, pages: Optional[str] = None, url_pattern: Optional[str] = None, handle_captcha: bool = False, progress_callback=None) -> str:
+    async def _fetch_url(self, url: str, pages: Optional[str] = None, 
+                        url_pattern: Optional[str] = None, 
+                        handle_captcha: bool = False, 
+                        progress_callback=None) -> str:
         self.current_url = url
-        proxy = await self.proxy_manager.get_proxy()
-
-        if progress_callback:
-            progress_callback("Fetching webpage content...")
-
-        contents = await self.playwright_scraper.fetch_content(url, proxy, pages, url_pattern, handle_captcha)
-        self.current_content = "\n".join(contents)
         
-        if progress_callback:
-            progress_callback("Preprocessing content...")
-        
-        self.preprocessed_content = self._preprocess_content(self.current_content)
+        try:
+            # Check if it's an onion URL using the static method
+            if TorScraper.is_onion_url(url):
+                if progress_callback:
+                    progress_callback("Fetching content through Tor network...")
+                
+                content = await self.tor_scraper.fetch_content(url)
+                self.current_content = content
+                
+            else:
+                # Existing regular scraping logic
+                proxy = await self.proxy_manager.get_proxy()
+                contents = await self.playwright_scraper.fetch_content(
+                    url, proxy, pages, url_pattern, handle_captcha
+                )
+                self.current_content = "\n".join(contents)
+            
+            if progress_callback:
+                progress_callback("Preprocessing content...")
+            
+            self.preprocessed_content = self._preprocess_content(self.current_content)
+            
+            new_hash = self._hash_content(self.preprocessed_content)
+            if self.content_hash != new_hash:
+                self.content_hash = new_hash
+                self.query_cache.clear()
 
-        new_hash = self._hash_content(self.preprocessed_content)
-        if self.content_hash != new_hash:
-            self.content_hash = new_hash
-            self.query_cache.clear()
-
-        return f"I've fetched and preprocessed the content from {self.current_url}" + \
-            (f" (pages: {pages})" if pages else "") + \
-            ". What would you like to know about it?"
+            source_type = "Tor network" if TorScraper.is_onion_url(url) else "regular web"
+            return f"I've fetched and preprocessed the content from {self.current_url} via {source_type}" + \
+                (f" (pages: {pages})" if pages else "") + \
+                ". What would you like to know about it?"
+                
+        except TorException as e:
+            return f"Error accessing onion service: {str(e)}"
+        except Exception as e:
+            return f"Error fetching content: {str(e)}"
 
     def _preprocess_content(self, content: str) -> str:
         soup = BeautifulSoup(content, 'html.parser')

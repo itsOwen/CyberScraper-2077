@@ -126,7 +126,7 @@ class WebExtractor:
         self.current_url = url
         
         try:
-            # Check if it's an onion URL using the static method
+            # Check if it's an onion URL
             if TorScraper.is_onion_url(url):
                 if progress_callback:
                     progress_callback("Fetching content through Tor network...")
@@ -135,10 +135,17 @@ class WebExtractor:
                 self.current_content = content
                 
             else:
-                # Existing regular scraping logic
-                proxy = await self.proxy_manager.get_proxy()
+                # Regular scraping without Tor
+                if progress_callback:
+                    progress_callback(f"Fetching content from {url}")
+                
+                # Don't use proxy for non-onion URLs
                 contents = await self.playwright_scraper.fetch_content(
-                    url, proxy, pages, url_pattern, handle_captcha
+                    url, 
+                    proxy=None,  # Explicitly set proxy to None for regular URLs
+                    pages=pages, 
+                    url_pattern=url_pattern, 
+                    handle_captcha=handle_captcha
                 )
                 self.current_content = "\n".join(contents)
             

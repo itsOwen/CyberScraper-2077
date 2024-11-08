@@ -14,32 +14,22 @@ from .exceptions import (
 )
 
 class TorManager:
-    """Manages Tor connection and session handling"""
-    
     def __init__(self, config: TorConfig = TorConfig()):
         self.logger = logging.getLogger(__name__)
         self.logger.setLevel(logging.DEBUG if config.debug else logging.INFO)
         self.config = config
         self._setup_logging()
-        self._setup_proxy()
+        # Store proxy configuration without applying globally
+        self.proxies = {
+            'http': f'socks5h://127.0.0.1:{self.config.socks_port}',
+            'https': f'socks5h://127.0.0.1:{self.config.socks_port}'
+        }
         
     def _setup_logging(self):
         handler = logging.StreamHandler()
         formatter = logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - %(message)s')
         handler.setFormatter(formatter)
         self.logger.addHandler(handler)
-        
-    def _setup_proxy(self):
-        """Configure SOCKS proxy for Tor"""
-        try:
-            socks.set_default_proxy(socks.SOCKS5, "127.0.0.1", self.config.socks_port)
-            socket.socket = socks.socksocket
-            self.proxies = {
-                'http': f'socks5h://127.0.0.1:{self.config.socks_port}',
-                'https': f'socks5h://127.0.0.1:{self.config.socks_port}'
-            }
-        except Exception as e:
-            raise TorProxyError(f"Failed to setup Tor proxy: {str(e)}")
 
     def get_headers(self) -> Dict[str, str]:
         """Get randomized Tor Browser-like headers"""
@@ -57,6 +47,13 @@ class TorManager:
             'Sec-Fetch-User': '?1'
         }
 
+    def get_tor_session(self) -> requests.Session:
+        """Create a requests session that routes through Tor"""
+        session = requests.Session()
+        session.proxies = self.proxies
+        session.headers = self.get_headers()
+        return session
+
     async def verify_tor_connection(self) -> bool:
         """Verify Tor connection is working"""
         try:
@@ -73,13 +70,6 @@ class TorManager:
                 
         except Exception as e:
             raise TorConnectionError(f"Failed to verify Tor connection: {str(e)}")
-
-    def get_tor_session(self) -> requests.Session:
-        """Create a requests session that routes through Tor"""
-        session = requests.Session()
-        session.proxies = self.proxies
-        session.headers = self.get_headers()
-        return session
 
     @staticmethod
     def is_onion_url(url: str) -> bool:

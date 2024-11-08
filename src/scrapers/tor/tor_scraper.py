@@ -1,4 +1,4 @@
-from typing import Dict, Any, List, Optional
+from typing import Dict, Any
 from .tor_manager import TorManager
 from .tor_config import TorConfig
 from .exceptions import TorException
@@ -31,6 +31,7 @@ class TorScraper(BaseScraper):
             if not self.is_onion_url(url):
                 raise ValueError("Not an onion URL")
 
+            # Use Tor manager to fetch content
             content = await self.tor_manager.fetch_content(url)
             return content
         except Exception as e:

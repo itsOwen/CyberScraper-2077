@@ -127,6 +127,7 @@ If you prefer to use Docker, follow these steps to set up and run CyberScraper 2
      ```bash
      docker run -p 8501:8501 -e GOOGLE_API_KEY="your-actual-api-key" cyberscraper-2077
      ```
+   - Now visit the url: http://localhost:8501/
 
 5. Open your browser and navigate to `http://localhost:8501`.
 
@@ -149,6 +150,9 @@ If you want to use Ollama with the Docker setup:
    ```bash
    docker run -e OLLAMA_BASE_URL=http://host.docker.internal:11434 -p 8501:8501 cyberscraper-2077
    ```
+
+   Now visit the url: http://localhost:8501/
+   
    On Linux you might need to use this below:
    ```bash
    docker run -e OLLAMA_BASE_URL=http://<your-host-ip>:11434 -p 8501:8501 cyberscraper-2077

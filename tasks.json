@@ -1,0 +1,58 @@
+[
+  {
+    "id": "task-001",
+    "url": "https://www.commbank.com.au/home-loans/fixed-rate.html",
+    "instructions": "Extract both owner occupied fixed rate and investment fixed rate, including comparison rates",
+    "output_path": "./data/fixed_rates",
+    "output_filename": "cba_{timestamp}.csv",
+    "format": "csv",
+    "schedule_time": "09:00",
+    "model": "gpt-4o-mini",
+    "enabled": true,
+    "repeat": false,
+    "headers": {},
+    "last_executed": "2025-03-22T20:55:33.973834"
+  },
+  {
+    "id": "task-002",
+    "url": "https://www.westpac.com.au/personal-banking/home-loans/fixed/",
+    "instructions": "Extract both owner occupied fixed rate and investment fixed rate, including comparison rates",
+    "output_path": "./data/fixed_rates",
+    "output_filename": "westpac_{timestamp}.csv",
+    "format": "csv",
+    "schedule_time": "09:05",
+    "model": "gpt-4o-mini",
+    "enabled": true,
+    "repeat": true,
+    "headers": {},
+    "last_executed": "2025-03-22T20:55:44.968073"
+  },
+  {
+    "id": "task-003",
+    "url": "https://www.anz.com.au/personal/home-loans/fixed-rate/",
+    "instructions": "Extract both owner occupied fixed rate and investment fixed rate, including comparison rates",
+    "output_path": "./data/fixed_rates",
+    "output_filename": "anz_{timestamp}.csv",
+    "format": "csv",
+    "schedule_time": "09:10",
+    "model": "gpt-4o-mini",
+    "enabled": true,
+    "repeat": true,
+    "headers": {},
+    "last_executed": "2025-03-22T20:56:03.176599"
+  },
+  {
+    "id": "task-004",
+    "url": "https://www.nab.com.au/personal/home-loans/nab-fixed-rate-home-loan",
+    "instructions": "Extract both owner occupied fixed rate and investment fixed rate, including comparison rates",
+    "output_path": "./data/fixed_rates",
+    "output_filename": "nab_{timestamp}.csv",
+    "format": "csv",
+    "schedule_time": "09:15",
+    "model": "gpt-4o-mini",
+    "enabled": true,
+    "repeat": true,
+    "headers": {},
+    "last_executed": "2025-03-22T20:56:38.780644"
+  }
+]

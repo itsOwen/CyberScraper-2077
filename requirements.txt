@@ -1,3 +1,4 @@
+# Original CyberScraper 2077 dependencies (excluding problematic ones)
 streamlit
 asyncio
 pandas
@@ -15,16 +16,17 @@ aiohttp
 python-dotenv
 watchdog
 playwright_stealth
-ollama
-setuptools
 requests
 google_auth_oauthlib
 google-auth-httplib2 
 google-api-python-client
 google-generativeai
 langchain-google-genai
-PySocks>=1.7.1
-requests[socks]>=2.28.1
-xls
+
+# Additional dependencies for MCP server
 fastapi
 uvicorn
+pydantic
+
+# Exclude PyV8 as it's problematic
+# PyV8

@@ -1,6 +1,12 @@
 # 🌐 CyberScraper 2077
 
 <p align="center">
+  <a href="https://get.brightdata.com/o-webscraper">
+    <img src="https://i.ibb.co/5XfN86th/Start-collecting-728x90-1.png" alt="Collect-web-data-728x90" border="0">
+  </a>
+</p>
+
+<p align="center">
   <img src="https://i.postimg.cc/j5b7QSzg/scraper.png" alt="CyberScraper 2077 Logo">
 </p>
 
@@ -20,6 +26,12 @@
 CyberScraper 2077 is not just another web scraping tool – it's a glimpse into the future of data extraction. Born from the neon-lit streets of a cyberpunk world, this AI-powered scraper uses OpenAI, Gemini and LocalLLM Models to slice through the web's defenses, extracting the data you need with unparalleled precision and style.
 
 Whether you're a corpo data analyst, a street-smart netrunner, or just someone looking to pull information from the digital realm, CyberScraper 2077 has got you covered.
+
+<p align="center">
+  <a href="https://get.brightdata.com/o-webscraper">
+    <img src="https://i.ibb.co/qYS9TNXK/Collect-web-data-728x90-1.png" alt="Collect-web-data" border="0">
+  </a>
+</p>
 
 <p align="center">
   <img src="https://i.postimg.cc/3NHb15wq/20240821-074556.gif">
@@ -397,6 +409,12 @@ Got questions? Need support? Want to hire me for a gig?
 - 📧 Email: owensingh72@gmail.com
 - 🐦 Twitter: [@owensingh_](https://x.com/owensingh_)
 - 💬 Website: [Portfolio](https://www.owensingh.com)
+
+<p align="center">
+  <a href="https://get.brightdata.com/o-webscraper">
+    <img src="https://i.ibb.co/qYS9TNXK/Collect-web-data-728x90-1.png" alt="Start-collecting-728x90" border="0">
+  </a>
+</p>
 
 ## 🚨 Disclaimer
 

@@ -82,23 +82,40 @@ Whether you're a corpo data analyst, a street-smart netrunner, or just someone l
    pip install -r requirements.txt
    ```
 
-4. Set your API keys in your environment:
+4. Set your API keys in your terminal environment:
 
    **Linux/Mac:**
    ```bash
-   export OPENAI_API_KEY="your-api-key-here"
-   export GOOGLE_API_KEY="your-api-key-here"
-   export SCRAPELESS_API_KEY="your-scrapeless-api-key-here"
+   export OPENAI_API_KEY="your_openai_api_key_here"
+   export GOOGLE_API_KEY="your_google_api_key_here"
+   export SCRAPELESS_API_KEY="your_scrapeless_api_key_here"
    ```
 
    **Windows:**
    ```
-   set OPENAI_API_KEY=your-api-key-here
-   set GOOGLE_API_KEY=your-api-key-here
-   set SCRAPELESS_API_KEY=your-scrapeless-api-key-here
+   set OPENAI_API_KEY=your_openai_api_key_here
+   set GOOGLE_API_KEY=your_google_api_key_here
+   set SCRAPELESS_API_KEY=your_scrapeless_api_key_here
+   ```
+   
+   Get your Scrapeless API key from [Scrapeless Dashboard](https://app.scrapeless.com/dashboard/account?tab=apiKey)
+
+5. For permanent environment variable setup (optional):
+
+   **Linux/Mac - Add to your ~/.bashrc or ~/.zshrc:**
+   ```bash
+   echo 'export OPENAI_API_KEY="your_openai_api_key_here"' >> ~/.bashrc
+   echo 'export GOOGLE_API_KEY="your_google_api_key_here"' >> ~/.bashrc
+   echo 'export SCRAPELESS_API_KEY="your_scrapeless_api_key_here"' >> ~/.bashrc
+   source ~/.bashrc  # or source ~/.zshrc
    ```
 
-   Get your Scrapeless API key from [Scrapeless Dashboard](https://app.scrapeless.com/dashboard/account?tab=apiKey)
+   **Windows - Using PowerShell (as Administrator):**
+   ```powershell
+   [Environment]::SetEnvironmentVariable("OPENAI_API_KEY", "your_openai_api_key_here", "User")
+   [Environment]::SetEnvironmentVariable("GOOGLE_API_KEY", "your_google_api_key_here", "User")
+   [Environment]::SetEnvironmentVariable("SCRAPELESS_API_KEY", "your_scrapeless_api_key_here", "User")
+   ```
 
 ## 🐳 Docker Installation
 
@@ -168,14 +185,21 @@ async def _fetch_with_unlocker(self, url: str) -> Dict[str, Any]:
                 "url": url,
                 "proxy_country": self.scrapeless_config.proxy_country,
                 "method": "GET",
-                "redirect": False,
+                "redirect": True,
+                "js_render": True,
+            },
+            proxy={
+                "country": self.scrapeless_config.proxy_country
             }
         )
         
-        if "error" in result:
-            return {"error": result.get("error", "Unknown error")}
-        
-        return result
+        # Extract HTML content from response
+        if "code" in result and "data" in result:
+            data = result["data"]
+            if isinstance(data, dict) and "html" in data:
+                return {"html": data["html"]}
+            
+        return {"error": "Could not find HTML content in the response"}
     except Exception as e:
         return {"error": str(e)}
 ```
@@ -245,18 +269,6 @@ def _use_specific_scraper(self, url: str, scraper_type: str) -> Dict[str, Any]:
         return {"error": str(e)}
 ```
 
-## 🌐 Supported Websites
-
-With Scrapeless integration, CyberScraper 2077 can now handle virtually any website, including previously challenging ones:
-
-- **E-commerce**: Amazon, eBay, Shopee, Alibaba, Walmart
-- **Social Media**: Twitter/X, Instagram, Facebook, LinkedIn
-- **Travel**: Booking.com, Expedia, Airbnb, Hotels.com
-- **Finance**: Yahoo Finance, Bloomberg, CNBC
-- **News**: NY Times, Washington Post, BBC, CNN
-- **Protected Sites**: Sites using Cloudflare, Akamai, DataDome, Imperva
-- **CAPTCHA-Protected**: Sites using reCAPTCHA, hCaptcha
-
 ## 📚 Scrapeless SDK Reference
 
 ### Scraper API - For pre-built scrapers
@@ -284,20 +296,6 @@ result = scrapeless.scraper(
         "country": "US",
     }
 )
-
-# Travel industry example - Iberia
-result = scrapeless.scraper(
-    actor="scraper.iberia",
-    input={
-        "proxy": "your-proxy-here",
-        "username": "account-username",
-        "password": "account-password",
-        "body": "{\"slices\":[{\"origin\":\"NYC\",\"destination\":\"MAD\",\"date\":\"2024-11-03\"}],\"passengers\":[{\"passengerType\":\"ADULT\",\"count\":1}]}"
-    },
-    proxy={
-        "country": "US",
-    }
-)
 ```
 
 ### Web Unlocker - For general web access and anti-bot bypassing
@@ -313,29 +311,8 @@ result = scrapeless.unlocker(
         "url": "https://www.protected-website.com",
         "proxy_country": "ANY",  # Use specific country code if needed
         "method": "GET",
-        "redirect": False,
-    }
-)
-
-# Akamai cookie unlocker
-result = scrapeless.unlocker(
-    actor="unlocker.akamaiweb",
-    input={
-        "type": "cookie",
-        "proxy_country": "ANY",
-        "url": "https://www.akamai-protected-site.com/",
-        "userAgent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/130.0.0.0 Safari/537.36",
-    }
-)
-
-# Akamai sensor unlocker
-result = scrapeless.unlocker(
-    actor="unlocker.akamaiweb",
-    input={
-        "abck": "abck-cookie-value",
-        "bmsz": "bmsz-value",
-        "url": "https://www.akamai-protected-site.com",
-        "userAgent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/130.0.0.0 Safari/537.36"
+        "redirect": True,
+        "js_render": True
     }
 )
 ```
@@ -357,47 +334,6 @@ result = scrapeless.solver_captcha(
     },
     timeout=10
 )
-
-# Enterprise reCAPTCHA
-result = scrapeless.solver_captcha(
-    actor="captcha.recaptcha.enterprise",
-    input={
-        "version": "v3",
-        "pageURL": "https://recaptcha-demo.appspot.com/",
-        "siteKey": "6Le80pApAAAAANg24CMbhL_U2PASCW_JUnq5jPys",
-        "pageAction": "scraping",
-        "invisible": False
-    },
-    timeout=10
-)
-
-# Alternative method for continuous checking
-def solve_captcha():
-    actor = "captcha.recaptcha"
-    input_data = {
-        "version": "v2",
-        "pageURL": "https://www.google.com",
-        "siteKey": "6Le-wvkSAAAAAPBMRTvw0Q4Muexq9bi0DJwx_mJ-",
-        "pageAction": ""
-    }
-
-    result = scrapeless.create_captcha_task(actor, input=input_data)
-    return result
-
-def get_captcha_result(taskId):
-    result = scrapeless.get_captcha_task_result(taskId)
-    return result
-
-# Use with a polling mechanism
-captcha_result = solve_captcha()
-taskId = captcha_result["taskId"]
-
-while True:
-    captcha_result = get_captcha_result(taskId)
-    if captcha_result["success"] == True:
-        print(captcha_result)
-        break
-    time.sleep(5)
 ```
 
 ## 🧰 Scrapeless Configuration
@@ -413,7 +349,7 @@ class ScrapelessConfig:
                  timeout: int = 30,
                  debug: bool = False,
                  max_retries: int = 3):
-        self.api_key = api_key or os.getenv("SCRAPELESS_API_KEY", "")
+        self.api_key = api_key or os.environ.get("SCRAPELESS_API_KEY", "")
         self.proxy_country = proxy_country
         self.timeout = timeout
         self.debug = debug
@@ -430,19 +366,36 @@ The integration with Scrapeless opens up new possibilities for CyberScraper 2077
 4. **API Integration**: Direct integration with other services
 5. **Enhanced Multi-Page Navigation**: More sophisticated multi-page extraction patterns
 
-## 📊 Performance Comparison
+## 🛠️ Troubleshooting
 
-### Before Scrapeless Integration:
-- **Protected Sites Success Rate**: ~60%
-- **Average Scraping Time**: 45 seconds
-- **CAPTCHA Success Rate**: Manual intervention required
-- **Resource Usage**: High (local browser instances)
+If you encounter issues with CyberScraper 2077, try these common fixes:
 
-### After Scrapeless Integration:
-- **Protected Sites Success Rate**: ~95%
-- **Average Scraping Time**: 12 seconds
-- **CAPTCHA Success Rate**: ~90% automatic solving
-- **Resource Usage**: Low (API calls only)
+### API Key Issues
+If you see errors about missing API keys:
+1. Ensure you've properly exported the environment variables in your current terminal session
+2. Try running the app with the API keys set directly:
+   ```bash
+   OPENAI_API_KEY=your-key SCRAPELESS_API_KEY=your-key streamlit run main.py
+   ```
+3. Verify your API keys are valid by testing them directly
+
+### Scraping Issues
+If scraping doesn't work or returns empty results:
+1. Check the terminal for debug output about the Scrapeless API response
+2. Try using the Scrapeless SDK directly with a test script
+3. Different websites might require different settings - try enabling JavaScript rendering with `js_render: True`
+
+### Data Conversion Errors
+If you see PyArrow conversion errors:
+1. These are usually caused by mixed data types in DataFrame columns
+2. The app has data type handling in place, but some websites might return unusual formats
+3. You can check the raw response structure in the terminal logs
+
+### State Persistence Problems
+If the app forgets the content after scraping:
+1. Make sure you're not closing or refreshing the browser between requests
+2. The session state variables should preserve content between interactions
+3. Check the terminal for debug info about content length
 
 ## 🤝 Contributing
 

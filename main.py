@@ -1,6 +1,8 @@
 import streamlit as st
 import json
 import asyncio
+import os
+import sys
 from app.streamlit_web_scraper_chat import StreamlitWebScraperChat
 from app.ui_components import display_info_icons, display_message, extract_data_from_markdown, format_data
 from app.utils import loading_animation, get_loading_message
@@ -17,9 +19,20 @@ from src.web_extractor import ScrapelessConfig
 import time
 from urllib.parse import urlparse
 import atexit
-import os
-import fix_env  # This loads and sets all environment variables
 
+# Check for required API keys at startup
+api_keys = {
+    "OPENAI_API_KEY": os.environ.get("OPENAI_API_KEY", ""),
+    "SCRAPELESS_API_KEY": os.environ.get("SCRAPELESS_API_KEY", ""),
+    "GOOGLE_API_KEY": os.environ.get("GOOGLE_API_KEY", "")
+}
+
+# Print debug info about API keys without revealing full keys
+for key_name, key_value in api_keys.items():
+    is_set = bool(key_value)
+    print(f"{key_name}: {'Set (' + key_value[:5] + '...)' if is_set else 'Not set'}")
+
+# Initialize session state variables for content persistence
 if 'current_url' not in st.session_state:
     st.session_state.current_url = None
 if 'current_content' not in st.session_state:

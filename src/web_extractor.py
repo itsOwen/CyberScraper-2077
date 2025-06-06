@@ -30,7 +30,16 @@ class ScrapelessConfig:
                  timeout: int = 30,
                  debug: bool = False,
                  max_retries: int = 3):
-        self.api_key = api_key or os.getenv("SCRAPELESS_API_KEY", "")
+        # Get API key directly from environment if not provided
+        self.api_key = api_key or os.environ.get("SCRAPELESS_API_KEY", "")
+        if not self.api_key:
+            st.error("SCRAPELESS_API_KEY is not set. Please set it in your environment variables.")
+            st.info("""
+            Set it using the following command:
+            ```
+            export SCRAPELESS_API_KEY=your-api-key-here
+            ```
+            """)
         self.proxy_country = proxy_country
         self.timeout = timeout
         self.debug = debug

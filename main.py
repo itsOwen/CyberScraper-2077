@@ -13,11 +13,21 @@ import io
 from io import BytesIO
 import re
 from src.utils.google_sheets_utils import SCOPES, get_redirect_uri, display_google_sheets_button, initiate_google_auth
-from src.scrapers.playwright_scraper import ScraperConfig
+from src.web_extractor import ScrapelessConfig
 import time
 from urllib.parse import urlparse
 import atexit
 import os
+import fix_env  # This loads and sets all environment variables
+
+if 'current_url' not in st.session_state:
+    st.session_state.current_url = None
+if 'current_content' not in st.session_state:
+    st.session_state.current_content = None
+if 'preprocessed_content' not in st.session_state:
+    st.session_state.preprocessed_content = None
+if 'content_hash' not in st.session_state:
+    st.session_state.content_hash = None
 
 def handle_oauth_callback():
     if 'code' in st.query_params:
@@ -175,16 +185,19 @@ def initialize_web_scraper_chat(url=None):
     else:
         model = st.session_state.selected_model
     
-    scraper_config = ScraperConfig(
-        use_current_browser=st.session_state.use_current_browser,
-        headless=not st.session_state.use_current_browser,
-        max_retries=3,
-        delay_after_load=5,
+    api_key = os.getenv("SCRAPELESS_API_KEY", "")
+    if not api_key:
+        st.warning("SCRAPELESS_API_KEY is not set. Please set it in your environment variables.")
+    
+    scrapeless_config = ScrapelessConfig(
+        api_key=api_key,
+        proxy_country=st.session_state.get("proxy_country", "ANY"),
+        timeout=30,
         debug=True,
-        wait_for='domcontentloaded'
+        max_retries=3
     )
     
-    web_scraper_chat = StreamlitWebScraperChat(model_name=model, scraper_config=scraper_config)
+    web_scraper_chat = StreamlitWebScraperChat(model_name=model, scrapeless_config=scrapeless_config)
     if url:
         web_scraper_chat.process_message(url)
         
@@ -317,6 +330,8 @@ def main():
         st.session_state.selected_model = "gpt-4o-mini"
     if 'web_scraper_chat' not in st.session_state:
         st.session_state.web_scraper_chat = None
+    if 'proxy_country' not in st.session_state:
+        st.session_state.proxy_country = "ANY"
 
     with st.sidebar:
         st.title("Conversation History")
@@ -339,8 +354,19 @@ def main():
         
         if not os.getenv("GOOGLE_API_KEY") and any(model.startswith("gemini-") for model in all_models):
             st.warning("Google API Key is not set. Gemini models may not be available.")
+            
+        if not os.getenv("SCRAPELESS_API_KEY"):
+            st.warning("Scrapeless API Key is not set. Scraping functionality will not work.")
 
-        st.session_state.use_current_browser = st.checkbox("Use Current Browser (No Docker)", value=False, help="Works Natively, Doesn't Work with Docker. if a website is blocking your browser, you can use this option to use the current browser instead of opening a new one.")
+        # Scrapeless configuration
+        st.sidebar.subheader("Scrapeless Configuration")
+        proxy_countries = ["ANY", "US", "UK", "CA", "AU", "DE", "FR", "JP", "SG"]
+        selected_country = st.sidebar.selectbox("Proxy Country", proxy_countries, index=0)
+        
+        if selected_country != st.session_state.proxy_country:
+            st.session_state.proxy_country = selected_country
+            if st.session_state.web_scraper_chat:
+                st.session_state.web_scraper_chat = None
 
         if st.button("Refresh Ollama Models"):
             with st.spinner("Fetching Ollama models..."):
@@ -398,6 +424,7 @@ def main():
     st.markdown(
         """
         <h1 style="text-align: center; font-size: 30px; color: #333;">CyberScraper 2077</h1>
+        <p style="text-align: center; font-size: 18px; color: #666;">Powered by Scrapeless</p>
         """,
         unsafe_allow_html=True
     )
@@ -440,19 +467,28 @@ def main():
         if prompt.lower().startswith("http"):
             website_name = get_website_name(prompt)
             st.session_state.chat_history[st.session_state.current_chat_id]["name"] = website_name
-            st.info(f"Scraping {website_name}... This may take a moment.")
+            st.info(f"Scraping {website_name} using Scrapeless... This may take a moment.")
+            # Clear previous content state when a new URL is entered
+            st.session_state.current_content = None
+            st.session_state.preprocessed_content = None
 
         with st.chat_message("assistant"):
             try:
+                # Add debug output
+                st.write(f"Debug - Has current content: {'Yes' if st.session_state.current_content else 'No'}")
+                
                 full_response = loading_animation(
                     safe_process_message,
                     st.session_state.web_scraper_chat,
                     prompt
                 )
+                
+                # Check content state after processing
+                st.write(f"Debug - After processing, has content: {'Yes' if st.session_state.current_content else 'No'}")
+                
                 if isinstance(full_response, str) and not full_response.startswith("Error:"):
                     st.success("Scraping completed successfully!")
 
-                st.write("Debug: Full response type:", type(full_response))
                 if full_response is not None:
                     if isinstance(full_response, tuple) and len(full_response) == 2 and isinstance(full_response[1], BytesIO):
                         st.session_state.chat_history[st.session_state.current_chat_id]["messages"].append({"role": "assistant", "content": full_response[0]})

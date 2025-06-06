@@ -91,6 +91,21 @@ def format_data(data: Union[str, bytes, io.BytesIO], format_type: str):
                 
                 df = pd.DataFrame(padded_data[1:], columns=unique_headers)
                 
+                # Clean up data types for better arrow compatibility
+                for col in df.columns:
+                    # Replace 'N/A', 'NA', 'null', etc. with proper NaN
+                    df[col] = df[col].replace(['N/A', 'NA', 'null', 'NULL', 'None', ''], pd.NA)
+                    
+                    # Try to convert to numeric if it makes sense
+                    if pd.to_numeric(df[col], errors='coerce').notna().any():
+                        df[col] = pd.to_numeric(df[col], errors='coerce')
+                    else:
+                        # If not numeric, ensure it's string
+                        df[col] = df[col].astype(str)
+                        # Replace 'nan' strings with empty strings
+                        df[col] = df[col].replace('nan', '')
+                
+                # Filter out empty columns
                 df = df.loc[:, (df != '').any(axis=0)]
                 
                 return df

@@ -1,4 +1,4 @@
-from typing import Dict, Any, Optional, List, Tuple, Union
+from typing import Dict, Any, Optional, List, Tuple, Union, Callable
 import json
 import pandas as pd
 from io import StringIO, BytesIO
@@ -8,10 +8,6 @@ from functools import lru_cache
 import hashlib
 from .models import Models
 from .ollama_models import OllamaModel, OllamaModelManager
-from .scrapers.playwright_scraper import PlaywrightScraper
-from .scrapers.html_scraper import HTMLScraper
-from .scrapers.json_scraper import JSONScraper
-from .utils.proxy_manager import ProxyManager
 from .utils.markdown_formatter import MarkdownFormatter
 from .prompts import get_prompt_for_model
 from langchain.schema.runnable import RunnableSequence
@@ -19,20 +15,30 @@ from langchain.text_splitter import RecursiveCharacterTextSplitter
 import tiktoken
 import csv
 from bs4 import BeautifulSoup, Comment
-from .scrapers.playwright_scraper import PlaywrightScraper, ScraperConfig
 from urllib.parse import urlparse
 import streamlit as st
 import os
 import google.generativeai as genai
 from langchain_google_genai import ChatGoogleGenerativeAI
-from .scrapers.tor.tor_scraper import TorScraper
-from .scrapers.tor.tor_config import TorConfig
-from .scrapers.tor.exceptions import TorException
+from scrapeless import ScrapelessClient
+
+class ScrapelessConfig:
+    """Configuration for Scrapeless SDK"""
+    def __init__(self, 
+                 api_key: Optional[str] = None,
+                 proxy_country: str = "ANY",
+                 timeout: int = 30,
+                 debug: bool = False,
+                 max_retries: int = 3):
+        self.api_key = api_key or os.getenv("SCRAPELESS_API_KEY", "")
+        self.proxy_country = proxy_country
+        self.timeout = timeout
+        self.debug = debug
+        self.max_retries = max_retries
 
 class WebExtractor:
-    def __init__(self, model_name: str = "gpt-4o-mini", model_kwargs: Dict[str, Any] = None, 
-                 proxy: Optional[str] = None, scraper_config: ScraperConfig = None,
-                 tor_config: TorConfig = None):
+    def __init__(self, model_name: str = "gpt-4o-mini", model_kwargs: Dict[str, Any] = None,
+                 scrapeless_config: ScrapelessConfig = None):
         model_kwargs = model_kwargs or {}
         if isinstance(model_name, str) and model_name.startswith("ollama:"):
             self.model = OllamaModelManager.get_model(model_name[7:])
@@ -45,11 +51,8 @@ class WebExtractor:
             self.model = Models.get_model(model_name, **model_kwargs)
         
         self.model_name = model_name
-        self.scraper_config = scraper_config or ScraperConfig()
-        self.playwright_scraper = PlaywrightScraper(config=self.scraper_config)
-        self.html_scraper = HTMLScraper()
-        self.json_scraper = JSONScraper()
-        self.proxy_manager = ProxyManager(proxy)
+        self.scrapeless_config = scrapeless_config or ScrapelessConfig()
+        self.scrapeless = ScrapelessClient(api_key=self.scrapeless_config.api_key)
         self.markdown_formatter = MarkdownFormatter()
         self.current_url = None
         self.current_content = None
@@ -63,8 +66,6 @@ class WebExtractor:
         self.max_tokens = 128000 if model_name == "gpt-4o-mini" else 16385
         self.query_cache = {}
         self.content_hash = None
-        self.tor_config = tor_config or TorConfig()
-        self.tor_scraper = TorScraper(self.tor_config)
 
     @staticmethod
     def num_tokens_from_string(string: str) -> int:
@@ -94,12 +95,11 @@ class WebExtractor:
             response = await chain.ainvoke({"webpage_content": self.preprocessed_content, "query": query})
             return response.content
 
-    async def process_query(self, user_input: str, progress_callback=None) -> str:
+    async def process_query(self, user_input: str, progress_callback: Optional[Callable] = None) -> str:
         if user_input.lower().startswith("http"):
             parts = user_input.split(maxsplit=3)
             url = parts[0]
             pages = parts[1] if len(parts) > 1 and not parts[1].startswith('-') else None
-            url_pattern = parts[2] if len(parts) > 2 and not parts[2].startswith('-') else None
             handle_captcha = '-captcha' in user_input.lower()
 
             website_name = self.get_website_name(url)
@@ -107,7 +107,7 @@ class WebExtractor:
             if progress_callback:
                 progress_callback(f"Fetching content from {website_name}...")
 
-            response = await self._fetch_url(url, pages, url_pattern, handle_captcha, progress_callback)
+            response = await self._fetch_url(url, pages, handle_captcha, progress_callback)
         elif not self.current_content:
             response = "Please provide a URL first before asking for information."
         else:
@@ -119,55 +119,219 @@ class WebExtractor:
         self.conversation_history.append(f"AI: {response}")
         return response
 
-    async def _fetch_url(self, url: str, pages: Optional[str] = None, 
-                        url_pattern: Optional[str] = None, 
-                        handle_captcha: bool = False, 
+    async def _fetch_url(self, url: str, pages: Optional[str] = None,
+                        handle_captcha: bool = False,
                         progress_callback=None) -> str:
         self.current_url = url
         
         try:
-            # Check if it's an onion URL
-            if TorScraper.is_onion_url(url):
+            # Check if captcha handling is needed
+            if handle_captcha:
                 if progress_callback:
-                    progress_callback("Fetching content through Tor network...")
+                    progress_callback(f"Solving CAPTCHA for {url}...")
                 
-                content = await self.tor_scraper.fetch_content(url)
-                self.current_content = content
+                result = self._handle_captcha(url)
+                if "error" in result:
+                    return f"Error solving CAPTCHA: {result.get('error', 'Unknown error')}"
                 
-            else:
-                # Regular scraping without Tor
                 if progress_callback:
-                    progress_callback(f"Fetching content from {url}")
-                
-                # Don't use proxy for non-onion URLs
-                contents = await self.playwright_scraper.fetch_content(
-                    url, 
-                    proxy=None,  # Explicitly set proxy to None for regular URLs
-                    pages=pages, 
-                    url_pattern=url_pattern, 
-                    handle_captcha=handle_captcha
-                )
-                self.current_content = "\n".join(contents)
+                    progress_callback("CAPTCHA solved successfully!")
             
+            if progress_callback:
+                progress_callback(f"Scraping content from {url}...")
+            
+            # Use Scrapeless Web Unlocker to fetch the content
+            unlocker_result = await self._fetch_with_unlocker(url)
+            
+            if "error" in unlocker_result:
+                return f"Error fetching content: {unlocker_result.get('error', 'Unknown error')}"
+                
             if progress_callback:
                 progress_callback("Preprocessing content...")
             
+            # Handle content from multiple pages if needed
+            if pages:
+                all_contents = await self._fetch_multiple_pages(url, pages, progress_callback)
+                self.current_content = "\n".join(all_contents)
+            else:
+                # Extract the HTML content from the unlocker result
+                self.current_content = unlocker_result.get("html", "")
+            
+            # Make sure content is not empty
+            if not self.current_content or len(self.current_content.strip()) < 10:
+                return f"Error: Received empty or minimal content from {url}"
+            
+            # Ensure the content is preprocessed and saved
             self.preprocessed_content = self._preprocess_content(self.current_content)
+            
+            # Debug info
+            print(f"Content length: {len(self.current_content)}")
+            print(f"Preprocessed content length: {len(self.preprocessed_content)}")
             
             new_hash = self._hash_content(self.preprocessed_content)
             if self.content_hash != new_hash:
                 self.content_hash = new_hash
                 self.query_cache.clear()
 
-            source_type = "Tor network" if TorScraper.is_onion_url(url) else "regular web"
-            return f"I've fetched and preprocessed the content from {self.current_url} via {source_type}" + \
+            return f"I've fetched and preprocessed the content from {self.current_url}" + \
                 (f" (pages: {pages})" if pages else "") + \
                 ". What would you like to know about it?"
                 
-        except TorException as e:
-            return f"Error accessing onion service: {str(e)}"
         except Exception as e:
             return f"Error fetching content: {str(e)}"
+    
+    async def _fetch_with_unlocker(self, url: str) -> Dict[str, Any]:
+        """Fetch content using Scrapeless Web Unlocker"""
+        try:
+            result = self.scrapeless.unlocker(
+                actor="unlocker.webunlocker",
+                input={
+                    "url": url,
+                    "proxy_country": self.scrapeless_config.proxy_country,
+                    "method": "GET",
+                    "redirect": True,  # Changed to True to follow redirects
+                    "js_render": True,  # Added to ensure JavaScript rendering
+                },
+                proxy={
+                    "country": self.scrapeless_config.proxy_country
+                }
+            )
+            
+            # Debug info
+            print(f"Unlocker result keys: {result.keys() if isinstance(result, dict) else 'Not a dict'}")
+            if isinstance(result, dict):
+                print(f"Response structure: {json.dumps(result, indent=2)[:500]}...")
+            
+            if isinstance(result, dict):
+                # Check for error
+                if "error" in result:
+                    return {"error": result.get("error", "Unknown error")}
+                
+                # New structure: The API returns {"code": 200, "data": {...}}
+                if "code" in result and "data" in result:
+                    if result["code"] == 200:
+                        # Extract HTML from data field
+                        data = result["data"]
+                        
+                        # Check for different possible structures
+                        if isinstance(data, dict):
+                            if "html" in data:
+                                return {"html": data["html"]}
+                            elif "body" in data:
+                                return {"html": data["body"]}
+                            elif "content" in data:
+                                return {"html": data["content"]}
+                            elif "response" in data and "body" in data["response"]:
+                                return {"html": data["response"]["body"]}
+                            else:
+                                # If we can't find HTML content in any expected field, return the whole data
+                                print(f"Data keys: {data.keys() if isinstance(data, dict) else 'Not a dict'}")
+                                # Try to extract any text content we can find
+                                for key in ["text", "content", "result", "page", "value"]:
+                                    if key in data and isinstance(data[key], str):
+                                        return {"html": data[key]}
+                                
+                                # Last resort: convert the entire data to string
+                                return {"html": str(data)}
+                        elif isinstance(data, str):
+                            # If data is already a string, assume it's HTML
+                            return {"html": data}
+                        else:
+                            return {"error": f"Unexpected data type in response: {type(data)}"}
+                    else:
+                        return {"error": f"API returned non-200 code: {result['code']}"}
+                
+                # Fall back to checking for direct HTML
+                if "html" in result:
+                    return {"html": result["html"]}
+                elif "body" in result:
+                    return {"html": result["body"]}
+                
+                # Last resort: return error
+                return {"error": "Could not find HTML content in the response"}
+            else:
+                return {"error": f"Unexpected result type: {type(result)}"}
+        except Exception as e:
+            print(f"Exception in _fetch_with_unlocker: {str(e)}")
+            import traceback
+            traceback.print_exc()
+            return {"error": str(e)}
+    
+    async def _fetch_multiple_pages(self, base_url: str, pages: str, progress_callback=None) -> List[str]:
+        """Fetch content from multiple pages"""
+        page_numbers = self._parse_page_numbers(pages)
+        all_contents = []
+        
+        for page_num in page_numbers:
+            if progress_callback:
+                progress_callback(f"Fetching page {page_num}...")
+                
+            page_url = self._construct_page_url(base_url, page_num)
+            unlocker_result = await self._fetch_with_unlocker(page_url)
+            
+            if "error" in unlocker_result:
+                if progress_callback:
+                    progress_callback(f"Error fetching page {page_num}: {unlocker_result.get('error', 'Unknown error')}")
+                continue
+                
+            all_contents.append(unlocker_result.get("html", ""))
+                
+        return all_contents
+    
+    def _parse_page_numbers(self, pages: str) -> List[int]:
+        """Parse page number specification (e.g. '1-5,7,9-12')"""
+        page_numbers = []
+        for part in pages.split(','):
+            if '-' in part:
+                start, end = map(int, part.split('-'))
+                page_numbers.extend(range(start, end + 1))
+            else:
+                page_numbers.append(int(part))
+        
+        return sorted(set(page_numbers))
+    
+    def _construct_page_url(self, base_url: str, page_num: int) -> str:
+        """Construct URL for pagination based on common patterns"""
+        parsed_url = urlparse(base_url)
+        
+        # Check if URL already has pagination parameters
+        if 'page=' in base_url:
+            return re.sub(r'page=\d+', f'page={page_num}', base_url)
+        elif 'p=' in base_url:
+            return re.sub(r'p=\d+', f'p={page_num}', base_url)
+        
+        # If URL ends with a number, replace it
+        if re.search(r'/\d+/?$', parsed_url.path):
+            return re.sub(r'/\d+/?$', f'/{page_num}/', base_url)
+        
+        # Append page parameter
+        if '?' in base_url:
+            return f"{base_url}&page={page_num}"
+        else:
+            return f"{base_url}?page={page_num}"
+    
+    def _handle_captcha(self, url: str) -> Dict[str, Any]:
+        """Solve CAPTCHA using Scrapeless Captcha Solver"""
+        try:
+            # Extract the site key (this is a simplified example)
+            # In a real implementation, you would need to detect the CAPTCHA type and site key
+            parsed_url = urlparse(url)
+            base_url = f"{parsed_url.scheme}://{parsed_url.netloc}"
+            
+            result = self.scrapeless.solver_captcha(
+                actor="captcha.recaptcha",
+                input={
+                    "version": "v2",
+                    "pageURL": base_url,
+                    "siteKey": "6Le-wvkSAAAAAPBMRTvw0Q4Muexq9bi0DJwx_mJ-",  # This should be extracted from the page
+                    "pageAction": ""
+                },
+                timeout=self.scrapeless_config.timeout
+            )
+            
+            return result
+        except Exception as e:
+            return {"error": str(e)}
 
     def _preprocess_content(self, content: str) -> str:
         soup = BeautifulSoup(content, 'html.parser')
@@ -194,8 +358,21 @@ class WebExtractor:
         return text
 
     async def _extract_info(self, query: str) -> str:        
+        # Debug logs
+        print(f"Current URL: {self.current_url}")
+        print(f"Content exists: {self.current_content is not None}")
+        print(f"Preprocessed content exists: {self.preprocessed_content is not None}")
+        
         if not self.preprocessed_content:
-            return "Please provide a URL first before asking for information."
+            # If the URL was processed but content wasn't saved correctly
+            if self.current_url and not self.current_content:
+                print(f"URL exists but content missing. Re-fetching: {self.current_url}")
+                # Try to re-fetch the content
+                fetch_result = await self._fetch_url(self.current_url)
+                if "Error" in fetch_result:
+                    return fetch_result
+            else:
+                return "Please provide a URL first before asking for information."
 
         content_hash = self._hash_content(self.preprocessed_content)
         
@@ -292,13 +469,40 @@ class WebExtractor:
             if not parsed_data:
                 return "No data to convert to CSV.", pd.DataFrame()
             
+            # Generate CSV string
             output = StringIO()
             writer = csv.DictWriter(output, fieldnames=parsed_data[0].keys())
             writer.writeheader()
             writer.writerows(parsed_data)
             csv_string = output.getvalue()
             
+            # Create DataFrame with clean data types
             df = pd.DataFrame(parsed_data)
+            
+            # Clean up data types to fix PyArrow conversion issues
+            for col in df.columns:
+                # Convert N/A strings to actual NaN values
+                df[col] = df[col].replace('N/A', pd.NA)
+                
+                # Detect numeric columns and convert to appropriate types
+                if pd.api.types.is_numeric_dtype(df[col]):
+                    # Force numeric columns with N/A to be float (as int can't handle NaN)
+                    if df[col].isna().any():
+                        df[col] = pd.to_numeric(df[col], errors='coerce')
+                    else:
+                        # If no NaN values, try to convert to int if possible
+                        try:
+                            df[col] = pd.to_numeric(df[col], errors='coerce')
+                            # Convert to int if all values are whole numbers
+                            if (df[col] % 1 == 0).all():
+                                df[col] = df[col].astype('Int64')  # Use nullable integer type
+                        except:
+                            pass
+                else:
+                    # Convert string columns to string type explicitly
+                    df[col] = df[col].astype(str)
+                    # Replace 'nan' strings with empty strings
+                    df[col] = df[col].replace('nan', '')
             
             return csv_string, df
         except json.JSONDecodeError as e:

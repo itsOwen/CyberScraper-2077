@@ -192,29 +192,53 @@ class WebExtractor:
     async def _fetch_with_unlocker(self, url: str) -> Dict[str, Any]:
         """Fetch content using Scrapeless Web Unlocker"""
         try:
-            result = self.scrapeless.unlocker(
-                actor="unlocker.webunlocker",
-                input={
+            # Prepare the main payload following Scrapeless API structure
+            payload = {
+                "actor": "unlocker.webunlocker",
+                "input": {
                     "url": url,
-                    "proxy_country": self.scrapeless_config.proxy_country,
                     "method": "GET",
-                    "redirect": True,  # Changed to True to follow redirects
-                    "js_render": True,  # Added to ensure JavaScript rendering
-                },
-                proxy={
+                    "redirect": True,
+                    "js_render": True,
+                }
+            }
+            
+            # Add proxy configuration if a specific country is selected
+            if self.scrapeless_config.proxy_country and self.scrapeless_config.proxy_country != "ANY":
+                payload["proxy"] = {
                     "country": self.scrapeless_config.proxy_country
                 }
-            )
+            
+            # Debug logging
+            if self.scrapeless_config.debug:
+                print(f"Using proxy country: {self.scrapeless_config.proxy_country}")
+                print(f"Full payload: {json.dumps(payload, indent=2)}")
+            
+            # Make the API call using the correct structure
+            result = self.scrapeless.unlocker(**payload)
             
             # Debug info
-            print(f"Unlocker result keys: {result.keys() if isinstance(result, dict) else 'Not a dict'}")
-            if isinstance(result, dict):
-                print(f"Response structure: {json.dumps(result, indent=2)[:500]}...")
+            if self.scrapeless_config.debug:
+                print(f"Unlocker result keys: {result.keys() if isinstance(result, dict) else 'Not a dict'}")
+                if isinstance(result, dict):
+                    print(f"Response structure: {json.dumps(result, indent=2)[:500]}...")
             
             if isinstance(result, dict):
                 # Check for error
                 if "error" in result:
-                    return {"error": result.get("error", "Unknown error")}
+                    error_msg = result.get("error", "Unknown error")
+                    if self.scrapeless_config.debug:
+                        print(f"API Error: {error_msg}")
+                    return {"error": error_msg}
+                
+                # Check for HTTP error codes
+                if "code" in result and result["code"] != 200:
+                    error_msg = f"API returned error code {result['code']}"
+                    if "message" in result:
+                        error_msg += f": {result['message']}"
+                    if self.scrapeless_config.debug:
+                        print(f"HTTP Error: {error_msg}")
+                    return {"error": error_msg}
                 
                 # New structure: The API returns {"code": 200, "data": {...}}
                 if "code" in result and "data" in result:
@@ -234,7 +258,8 @@ class WebExtractor:
                                 return {"html": data["response"]["body"]}
                             else:
                                 # If we can't find HTML content in any expected field, return the whole data
-                                print(f"Data keys: {data.keys() if isinstance(data, dict) else 'Not a dict'}")
+                                if self.scrapeless_config.debug:
+                                    print(f"Data keys: {data.keys() if isinstance(data, dict) else 'Not a dict'}")
                                 # Try to extract any text content we can find
                                 for key in ["text", "content", "result", "page", "value"]:
                                     if key in data and isinstance(data[key], str):
@@ -261,10 +286,12 @@ class WebExtractor:
             else:
                 return {"error": f"Unexpected result type: {type(result)}"}
         except Exception as e:
-            print(f"Exception in _fetch_with_unlocker: {str(e)}")
-            import traceback
-            traceback.print_exc()
-            return {"error": str(e)}
+            error_msg = f"Exception in _fetch_with_unlocker: {str(e)}"
+            if self.scrapeless_config.debug:
+                print(error_msg)
+                import traceback
+                traceback.print_exc()
+            return {"error": error_msg}
     
     async def _fetch_multiple_pages(self, base_url: str, pages: str, progress_callback=None) -> List[str]:
         """Fetch content from multiple pages"""

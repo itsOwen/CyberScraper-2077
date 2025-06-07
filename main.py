@@ -202,20 +202,29 @@ def initialize_web_scraper_chat(url=None):
     if not api_key:
         st.warning("SCRAPELESS_API_KEY is not set. Please set it in your environment variables.")
     
+    # Enable debug mode when using specific countries to help troubleshoot
+    proxy_country = st.session_state.get("proxy_country", "ANY")
+    debug_mode = proxy_country != "ANY"
+    
     scrapeless_config = ScrapelessConfig(
         api_key=api_key,
-        proxy_country=st.session_state.get("proxy_country", "ANY"),
+        proxy_country=proxy_country,
         timeout=30,
-        debug=True,
+        debug=debug_mode,
         max_retries=3
     )
     
     web_scraper_chat = StreamlitWebScraperChat(model_name=model, scrapeless_config=scrapeless_config)
     if url:
-        web_scraper_chat.process_message(url)
-        
-        website_name = get_website_name(url)
-        st.session_state.chat_history[st.session_state.current_chat_id]["name"] = website_name
+        try:
+            result = web_scraper_chat.process_message(url)
+            if "Error" in result:
+                st.error(f"Failed to initialize with URL: {result}")
+            else:
+                website_name = get_website_name(url)
+                st.session_state.chat_history[st.session_state.current_chat_id]["name"] = website_name
+        except Exception as e:
+            st.error(f"Error initializing with URL: {str(e)}")
     
     return web_scraper_chat
 
@@ -371,15 +380,35 @@ def main():
         if not os.getenv("SCRAPELESS_API_KEY"):
             st.warning("Scrapeless API Key is not set. Scraping functionality will not work.")
 
-        # Scrapeless configuration
+        # Scrapeless configuration with proper ISO country codes
         st.sidebar.subheader("Scrapeless Configuration")
-        proxy_countries = ["ANY", "US", "UK", "CA", "AU", "DE", "FR", "JP", "SG"]
-        selected_country = st.sidebar.selectbox("Proxy Country", proxy_countries, index=0)
+        # Using proper ISO 3166-1 alpha-2 country codes as per Scrapeless API documentation
+        proxy_countries = ["ANY", "US", "GB", "CA", "AU", "DE", "FR", "JP", "SG", "BR", "IN", "IT", "ES", "NL", "MX", "AR", "CL", "KR", "TH", "MY"]
+        proxy_labels = [
+            "Any Country", "United States", "United Kingdom", "Canada", "Australia", 
+            "Germany", "France", "Japan", "Singapore", "Brazil", "India", "Italy", 
+            "Spain", "Netherlands", "Mexico", "Argentina", "Chile", "South Korea", 
+            "Thailand", "Malaysia"
+        ]
+        
+        selected_index = st.sidebar.selectbox(
+            "Proxy Country", 
+            range(len(proxy_countries)),
+            format_func=lambda x: f"{proxy_labels[x]} ({proxy_countries[x]})",
+            index=0
+        )
+        selected_country = proxy_countries[selected_index]
         
         if selected_country != st.session_state.proxy_country:
             st.session_state.proxy_country = selected_country
             if st.session_state.web_scraper_chat:
                 st.session_state.web_scraper_chat = None
+        
+        # Show debug status
+        if selected_country != "ANY":
+            st.sidebar.info(f"🔍 Debug mode enabled for {proxy_labels[selected_index]} ({selected_country})")
+        else:
+            st.sidebar.success("✅ Using global proxy pool")
 
         if st.button("Refresh Ollama Models"):
             with st.spinner("Fetching Ollama models..."):
@@ -480,7 +509,8 @@ def main():
         if prompt.lower().startswith("http"):
             website_name = get_website_name(prompt)
             st.session_state.chat_history[st.session_state.current_chat_id]["name"] = website_name
-            st.info(f"Scraping {website_name} using Scrapeless... This may take a moment.")
+            proxy_info = f" via {st.session_state.proxy_country}" if st.session_state.proxy_country != "ANY" else ""
+            st.info(f"Scraping {website_name}{proxy_info} using Scrapeless... This may take a moment.")
             # Clear previous content state when a new URL is entered
             st.session_state.current_content = None
             st.session_state.preprocessed_content = None

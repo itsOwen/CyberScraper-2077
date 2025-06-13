@@ -31,7 +31,7 @@ Whether you're a corpo data analyst, a street-smart netrunner, or just someone l
 ### 🚀 Two Powerful Versions Available
 
 **Main Branch (Current)**: Traditional web scraping with advanced features
-**[Scrapeless Integration Branch](https://github.com/itsOwen/CyberScraper-2077/tree/CyberScrapeless-2077)**: Enterprise-grade scraping with [Scrapeless SDK](https://scrapeless.com) integration
+**[Scrapeless Integration Branch](https://github.com/itsOwen/CyberScraper-2077/tree/)**: Enterprise-grade scraping with [Scrapeless SDK](https://scrapeless.com) integration
 
 <p align="center">
   <a href="https://get.brightdata.com/o-webscraper">
@@ -61,7 +61,7 @@ Whether you're a corpo data analyst, a street-smart netrunner, or just someone l
 - 🧭 **Navigate through the Pages (BETA)**: Navigate through the webpage and scrape data from different pages.
 
 ### ⚔️ Scrapeless Integration Branch Features
-> **Want enterprise-grade scraping? Check out our [Scrapeless Integration Branch](https://github.com/itsOwen/CyberScraper-2077/tree/CyberScrapeless-2077)!**
+> **Want enterprise-grade scraping? Check out our [Scrapeless Integration Branch](https://github.com/itsOwen/CyberScraper-2077/tree/)!**
 
 - 🔐 **Advanced Web Unlocker**: Utilizes Scrapeless's enterprise-grade anti-detection technology to bypass Cloudflare, Akamai, DataDome, and other protection systems.
 - 🤖 **Automatic CAPTCHA Solving**: Seamlessly solves reCAPTCHA v2/v3, hCaptcha, and other verification challenges without human intervention.
@@ -138,7 +138,7 @@ For enterprise-grade scraping with automatic CAPTCHA solving and advanced anti-b
 1. Clone the Scrapeless integration branch:
    ```bash
    git clone -b CyberScrapeless-2077 https://github.com/itsOwen/CyberScraper-2077.git
-   cd CyberScrapeless-2077
+   cd CyberScraper-2077
    ```
 
 2. Install requirements and set API keys:
@@ -194,7 +194,7 @@ For the Scrapeless integration branch:
 
 ```bash
 git clone -b CyberScrapeless-2077 https://github.com/itsOwen/CyberScraper-2077.git
-cd CyberScrapeless-2077
+cd CyberScraper-2077
 docker build -t cyberscrapeless .
 docker run -p 8501:8501 \
   -e OPENAI_API_KEY="your-actual-api-key" \

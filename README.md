@@ -31,7 +31,7 @@ Whether you're a corpo data analyst, a street-smart netrunner, or just someone l
 ### 🚀 Two Powerful Versions Available
 
 **Main Branch (Current)**: Traditional web scraping with advanced features
-**[Scrapeless Integration Branch](https://github.com/itsOwen/CyberScraper-2077/tree/)**: Enterprise-grade scraping with [Scrapeless SDK](https://scrapeless.com) integration
+**[Scrapeless Integration Branch](https://github.com/itsOwen/CyberScraper-2077/tree/)**: Enterprise-grade scraping with [Scrapeless SDK](https://www.scrapeless.com?utm_source=owen) integration
 
 <p align="center">
   <a href="https://get.brightdata.com/o-webscraper">
@@ -64,7 +64,7 @@ Whether you're a corpo data analyst, a street-smart netrunner, or just someone l
 > **Want enterprise-grade scraping? Check out our [Scrapeless Integration Branch](https://github.com/itsOwen/CyberScraper-2077/tree/)!**
 
 - 🔐 **Advanced Web Unlocker**: Utilizes Scrapeless's enterprise-grade anti-detection technology to bypass Cloudflare, Akamai, DataDome, and other protection systems.
-- 🤖 **Automatic CAPTCHA Solving**: Seamlessly solves reCAPTCHA v2/v3, hCaptcha, and other verification challenges without human intervention.
+- 🤖 **Automatic CAPTCHA Solving**: Seamlessly solves reCAPTCHA v2/v3, and other verification challenges without human intervention.
 - 🌍 **Global Proxy Network**: Access content from specific countries with Scrapeless's extensive proxy network.
 - 🚀 **High-Speed Extraction**: Extract data at unprecedented speed without the overhead of local browser instances.
 - 📈 **95% Success Rate**: Achieve ~95% success rate on even heavily protected sites (compared to ~60-70% with traditional methods).
@@ -542,7 +542,7 @@ A: Yes, under the terms of the MIT License. The Scrapeless integration branch is
 A: Main branch: ~60-70% on protected sites. Scrapeless branch: ~95% on even heavily protected sites.
 
 **Q: Do I need to pay for Scrapeless?**
-A: Scrapeless offers various pricing tiers. Check their [pricing page](https://scrapeless.com/pricing) for current rates. The main branch remains free to use.
+A: Scrapeless offers various pricing tiers. Check their [pricing page](https://www.scrapeless.com?utm_source=owen) for current rates. The main branch remains free to use.
 
 ## 📄 License
 

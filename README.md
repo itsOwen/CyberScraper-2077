@@ -2,7 +2,7 @@
 
 <p align="center">
   <a href="https://www.thordata.com/?ls=VNSCxroa&lk=CyberScraper">
-    <img src="https://i.ibb.co/vxstLTqN/728-x-90-2.gif" alt="Collect-web-data-728x90" border="0">
+    <img src="https://i.postimg.cc/dtwTvm5V/728-x-90-2.gif" alt="Collect-web-data-728x90" border="0">
   </a>
 </p>
 
@@ -34,8 +34,8 @@ Whether you're a corpo data analyst, a street-smart netrunner, or just someone l
 **[Scrapeless Integration Branch](https://github.com/itsOwen/CyberScraper-2077/tree/)**: Enterprise-grade scraping with [Scrapeless SDK](https://www.scrapeless.com?utm_source=owen) integration
 
 <p align="center">
-  <a href="https://www.thordata.com/?ls=coupon&lk=coupon02">
-    <img src="https://i.ibb.co/vxstLTqN/728-x-90-2.gif">
+  <a href="https://www.thordata.com/?ls=VNSCxroa&lk=CyberScraper">
+    <img src="https://i.postimg.cc/dtwTvm5V/728-x-90-2.gif" alt="Collect-web-data-728x90" border="0">
   </a>
 </p>
 
@@ -584,8 +584,8 @@ Got questions? Need support? Want to hire me for a gig?
 - **📧 Email**: market@scrapeless.com
 
 <p align="center">
-  <a href="https://www.thordata.com/?ls=coupon&lk=coupon02">
-    <img src="https://i.ibb.co/vxstLTqN/728-x-90-2.gif" alt="Start-collecting-728x90" border="0">
+  <a href="https://www.thordata.com/?ls=VNSCxroa&lk=CyberScraper">
+    <img src="https://i.postimg.cc/dtwTvm5V/728-x-90-2.gif" alt="Collect-web-data-728x90" border="0">
   </a>
 </p>
 

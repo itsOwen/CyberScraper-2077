@@ -15,19 +15,6 @@
 
 > Rip data from the net, leaving no trace. Welcome to the future of web scraping.
 
-## 🤝 Sponsor
-
-<p align="center">
-  <a href="https://www.rapidproxy.io/?ref=Cys">
-    <img src="assets/rapidproxy-banner.png" alt="RapidProxy — Unlock Scalable Web Data for Your Business" width="100%">
-  </a>
-</p>
-
-<p align="center">
-  <b><a href="https://www.rapidproxy.io/?ref=Cys">RapidProxy</a></b> — high-performance residential proxies for web scraping, automation, and large-scale data collection. 90M+ real residential IPs with smart rotation and non-expiring traffic.<br>
-  Try it free — plans from <b>$0.65/GB</b>. Use code <b><code>RAPID10</code></b> for 10% off.
-</p>
-
 ## 🔍 About
 
 CyberScraper 2077 is not just another web scraping tool – it's a glimpse into the future of data extraction. Born from the neon-lit streets of a cyberpunk world, this AI-powered scraper uses OpenAI, Gemini and LocalLLM Models to slice through the web's defenses, extracting the data you need with unparalleled precision and style.

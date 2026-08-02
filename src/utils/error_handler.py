@@ -188,4 +188,10 @@ def check_model_api_key(model_name: str) -> str | None:
     if model_name.startswith("gemini-") and not os.getenv("GOOGLE_API_KEY"):
         return ErrorMessages.GOOGLE_API_KEY_MISSING
 
+    if model_name.startswith("litellm:") and not os.getenv("LITELLM_API_KEY"):
+        return (
+            "LiteLLM API Key is missing. Set the LITELLM_API_KEY environment "
+            "variable before using a litellm:<model> entry."
+        )
+
     return None

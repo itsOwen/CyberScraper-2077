@@ -71,7 +71,7 @@ def get_prompt_for_model(model_name: str) -> PromptTemplate:
             return _UNIFIED_PROMPT
         case name if name.startswith("gemini-"):
             return _UNIFIED_PROMPT
-        case name if name.startswith("ollama:"):
+        case name if name.startswith(("ollama:", "litellm:")):
             return _UNIFIED_PROMPT
         case _:
             raise ValueError(f"Unsupported model: {model_name}")

@@ -241,6 +241,11 @@ def check_service_status() -> dict:
             "configured": bool(os.getenv("GOOGLE_API_KEY")),
             "env_var": "GOOGLE_API_KEY"
         },
+        "litellm": {
+            "name": "LiteLLM",
+            "configured": bool(os.getenv("LITELLM_API_KEY")),
+            "env_var": "LITELLM_API_KEY"
+        },
         "tor": {
             "name": "Tor",
             "configured": False,  # Will be checked dynamically
@@ -453,7 +458,12 @@ def main():
         st.subheader("Select Model")
         default_models = ["gpt-4.1-mini", "gpt-4o-mini", "gemini-1.5-flash", "gemini-pro"]
         ollama_models = st.session_state.get('ollama_models', [])
-        all_models = default_models + [f"ollama:{model}" for model in ollama_models]
+        litellm_models = [
+            f"litellm:{model.strip()}"
+            for model in os.getenv("LITELLM_MODELS", "").split(",")
+            if model.strip()
+        ]
+        all_models = default_models + litellm_models + [f"ollama:{model}" for model in ollama_models]
         selected_model = st.selectbox("Choose a model", all_models, index=all_models.index(st.session_state.selected_model) if st.session_state.selected_model in all_models else 0)
 
         if selected_model != st.session_state.selected_model:

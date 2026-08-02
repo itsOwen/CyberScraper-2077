@@ -79,6 +79,19 @@ Please follow the Docker Container Guide given below, as I won't be able to main
    export GOOGLE_API_KEY="your-api-key-here"
    ```
 
+### Using LiteLLM
+
+Point CyberScraper at any model exposed by a LiteLLM proxy:
+
+```bash
+export LITELLM_API_KEY="your-proxy-key"
+export LITELLM_BASE_URL="http://localhost:4000/v1"
+export LITELLM_MODELS="my-gpt-model,my-claude-model"
+```
+
+The configured models appear in the sidebar as `litellm:<model>`. The base URL
+defaults to `http://localhost:4000/v1`.
+
 ### Using Ollama
 
 Note: I only recommend using OpenAI and Gemini API as these models are really good at following instructions. If you are using open-source LLMs, make sure you have a good system as the speed of the data generation/presentation depends on how well your system can run the LLM. You may also have to fine-tune the prompt and add some additional filters yourself.

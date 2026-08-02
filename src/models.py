@@ -32,6 +32,18 @@ class Models:
             raise ValueError(api_key_error)
 
         match model_name:
+            case name if name.startswith("litellm:"):
+                proxy_model = name.removeprefix("litellm:").strip()
+                if not proxy_model:
+                    raise ValueError("LiteLLM model name cannot be empty")
+                return ChatOpenAI(
+                    model=proxy_model,
+                    api_key=os.environ.get("LITELLM_API_KEY"),
+                    base_url=os.environ.get(
+                        "LITELLM_BASE_URL", "http://localhost:4000/v1"
+                    ).rstrip("/"),
+                    **kwargs,
+                )
             case "gpt-4.1-mini" | "gpt-4o-mini" | "gpt-4" | "gpt-3.5-turbo":
                 return ChatOpenAI(model_name=model_name, **kwargs)
             case name if name.startswith("text-"):

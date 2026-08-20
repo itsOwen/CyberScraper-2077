@@ -15,6 +15,19 @@
 
 > Rip data from the net, leaving no trace. Welcome to the future of web scraping.
 
+## 🤝 Sponsor
+
+<p align="center">
+  <a href="https://mangoproxy.com/?utm_source=itsowen&utm_medium=partner&utm_campaign=itsowen_github">
+    <img src="assets/mangoproxy-banner.png" alt="MangoProxy — Premium Proxies. Limitless Possibilities." width="100%">
+  </a>
+</p>
+
+<p align="center">
+  <b><a href="https://mangoproxy.com/?utm_source=itsowen&utm_medium=partner&utm_campaign=itsowen_github">MangoProxy</a></b> — Residential, ISP, Mobile and Datacenter proxy service designed for professional tasks where stability, speed, and anonymity matter.<br>
+  90M+ IP pool across 200+ locations, HTTP &amp; SOCKS5. Use code <b><code>OWEN</code></b> for 8% off Static ISP Proxies.
+</p>
+
 ## 🔍 About
 
 CyberScraper 2077 is not just another web scraping tool – it's a glimpse into the future of data extraction. Born from the neon-lit streets of a cyberpunk world, this AI-powered scraper uses OpenAI, Gemini and LocalLLM Models to slice through the web's defenses, extracting the data you need with unparalleled precision and style.

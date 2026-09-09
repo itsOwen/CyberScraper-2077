@@ -28,6 +28,19 @@
   90M+ IP pool across 200+ locations, HTTP &amp; SOCKS5. Use code <b><code>OWEN</code></b> for 8% off Static ISP Proxies.
 </p>
 
+<p align="center">
+  <a href="https://www.ipcook.com/?ref=EEXXM6&utm_source=github&utm_medium=referral&utm_campaign=itsowen_cyberscraper">
+    <img src="assets/ipcook-banner.png" alt="IPcook — Premium Residential Proxies for AI-Powered Scraping" width="100%">
+  </a>
+</p>
+
+<p align="center">
+  <b><a href="https://www.ipcook.com/?ref=EEXXM6&utm_source=github&utm_medium=referral&utm_campaign=itsowen_cyberscraper">IPcook</a></b> — Scrape more. Pay only for what you need.<br>
+  Residential proxies from $0.3–$3.2/GB, with pay-as-you-go traffic that never expires or monthly plans with automatic renewal for continuous scraping workloads.<br>
+  Flexible IP rotation, 55M+ residential IPs across 185+ locations, 99.99% uptime, and &lt;0.5s average response time.<br>
+  Try 100MB free and use code <b><code>WELCOME20</code></b> for 20% OFF.
+</p>
+
 ## 🔍 About
 
 CyberScraper 2077 is not just another web scraping tool – it's a glimpse into the future of data extraction. Born from the neon-lit streets of a cyberpunk world, this AI-powered scraper uses OpenAI, Gemini and LocalLLM Models to slice through the web's defenses, extracting the data you need with unparalleled precision and style.

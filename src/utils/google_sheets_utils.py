@@ -10,13 +10,52 @@ import os
 import json
 import hashlib
 import re
+import threading
+import time
 from io import BytesIO
 
 SCOPES = ['https://www.googleapis.com/auth/spreadsheets', 'https://www.googleapis.com/auth/drive.file']
 TOKEN_FILE = 'token.json'
 
+OAUTH_STATE_TTL_SECONDS = 600
+
+# Google redirects back into a brand new Streamlit session, so pending
+# authorization requests are kept per process instead of in session_state.
+_pending_oauth_states: dict[str, tuple[str | None, float]] = {}
+_pending_oauth_lock = threading.Lock()
+
+
 def get_redirect_uri():
-    return st.get_option("server.baseUrlPath") or "http://localhost:8501"
+    redirect_uri = os.getenv("GOOGLE_OAUTH_REDIRECT_URI")
+    if redirect_uri:
+        return redirect_uri
+    port = st.get_option("server.port") or 8501
+    base_path = (st.get_option("server.baseUrlPath") or "").strip("/")
+    return f"http://localhost:{port}/" + (f"{base_path}/" if base_path else "")
+
+
+def remember_oauth_state(state: str, code_verifier: str | None) -> None:
+    now = time.time()
+    with _pending_oauth_lock:
+        for key, (_, created) in list(_pending_oauth_states.items()):
+            if now - created > OAUTH_STATE_TTL_SECONDS:
+                del _pending_oauth_states[key]
+        _pending_oauth_states[state] = (code_verifier, now)
+
+
+def pop_pending_oauth_state(state: str | None) -> str | None:
+    """Return the PKCE code verifier for a pending authorization request, or None if the state is unknown."""
+    if not state:
+        return None
+    with _pending_oauth_lock:
+        entry = _pending_oauth_states.pop(state, None)
+    if entry is None:
+        return None
+    code_verifier, created = entry
+    if time.time() - created > OAUTH_STATE_TTL_SECONDS:
+        return None
+    # An empty string still marks the state as known when the flow did not use PKCE.
+    return code_verifier or ""
 
 def initiate_google_auth():
     if not os.path.exists('client_secret.json'):
@@ -35,8 +74,8 @@ def initiate_google_auth():
     )
     
     authorization_url, state = flow.authorization_url(prompt='consent')
-    
-    st.session_state['oauth_state'] = state
+
+    remember_oauth_state(state, flow.code_verifier)
     st.markdown(f"Please visit this URL to authorize the application: [Auth URL]({authorization_url})")
     st.info("After authorizing, you'll be redirected back to this app. Then you can proceed with uploading.")
 

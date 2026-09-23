@@ -26,23 +26,30 @@ from src.ollama_models import OllamaModel
 from src.utils.error_handler import ErrorMessages
 import pandas as pd
 import base64
+import html
 from google_auth_oauthlib.flow import Flow
 from io import BytesIO
-from src.utils.google_sheets_utils import SCOPES, get_redirect_uri, display_google_sheets_button, initiate_google_auth
+from src.utils.google_sheets_utils import SCOPES, get_redirect_uri, display_google_sheets_button, pop_pending_oauth_state
 from src.scrapers.playwright_scraper import ScraperConfig
 import time
-import atexit
 import logging
 
 logger = logging.getLogger(__name__)
 
 def handle_oauth_callback():
     if 'code' in st.query_params:
+        code_verifier = pop_pending_oauth_state(st.query_params.get('state'))
+        if code_verifier is None:
+            st.error(f"{ErrorMessages.OAUTH_FAILED}\n\nDetails: unknown or expired authorization request, please authorize again.")
+            logger.error("OAuth callback with unknown state")
+            st.query_params.clear()
+            return
         try:
             flow = Flow.from_client_secrets_file(
                 'client_secret.json',
                 scopes=SCOPES,
-                redirect_uri=get_redirect_uri()
+                redirect_uri=get_redirect_uri(),
+                code_verifier=code_verifier or None
             )
             flow.fetch_token(code=st.query_params['code'])
             st.session_state['google_auth_token'] = flow.credentials.to_json()
@@ -352,7 +359,7 @@ def render_message(role, content, avatar_path):
         <div class="avatar">
             <img src="data:image/png;base64,{avatar_base64}" alt="{role} avatar">
         </div>
-        <div class="message-content">{content}</div>
+        <div class="message-content">{html.escape(str(content))}</div>
     </div>
     """
 
@@ -407,15 +414,12 @@ def display_message_with_sheets_upload(message, message_index):
     else:
         st.markdown(str(content))
 
-def cleanup():
-    """Clean up resources on exit."""
-    try:
-        if 'web_scraper_chat' in st.session_state and st.session_state.web_scraper_chat:
-            del st.session_state.web_scraper_chat
-    except Exception:
-        pass  # Ignore errors during cleanup
-
-atexit.register(cleanup)
+def reset_web_scraper_chat():
+    """Close the current scraper (browser, Tor session) before dropping it."""
+    web_scraper_chat = st.session_state.get('web_scraper_chat')
+    if web_scraper_chat:
+        web_scraper_chat.close()
+    st.session_state.web_scraper_chat = None
 
 def main():
 
@@ -456,7 +460,7 @@ def main():
 
         # Model selection
         st.subheader("Select Model")
-        default_models = ["gpt-4.1-mini", "gpt-4o-mini", "gemini-1.5-flash", "gemini-pro"]
+        default_models = ["gpt-4.1-mini", "gpt-4o-mini", "gemini-3.8-flash", "gemini-3.5-flash-lite"]
         ollama_models = st.session_state.get('ollama_models', [])
         litellm_models = [
             f"litellm:{model.strip()}"
@@ -468,7 +472,7 @@ def main():
 
         if selected_model != st.session_state.selected_model:
             st.session_state.selected_model = selected_model
-            st.session_state.web_scraper_chat = None
+            reset_web_scraper_chat()
             st.rerun()
 
         # Display service status with checkmarks/crosses
@@ -492,7 +496,7 @@ def main():
                 "name": "🗨️ New Chat"
             }
             st.session_state.current_chat_id = new_chat_id
-            st.session_state.web_scraper_chat = None
+            reset_web_scraper_chat()
             save_chat_history(st.session_state.chat_history)
             st.rerun()
 
@@ -512,6 +516,9 @@ def main():
 
                 with col1:
                     if st.button(button_label, key=f"history_{chat_id}", use_container_width=True):
+                        if chat_id != st.session_state.current_chat_id:
+                            # The loaded page belongs to the previous chat.
+                            reset_web_scraper_chat()
                         st.session_state.current_chat_id = chat_id
                         messages = chat_data['messages']
                         last_url = get_last_url_from_chat(messages)
@@ -528,7 +535,7 @@ def main():
                                 st.session_state.current_chat_id = next(iter(st.session_state.chat_history))
                             else:
                                 st.session_state.current_chat_id = None
-                            st.session_state.web_scraper_chat = None
+                            reset_web_scraper_chat()
                         st.rerun()
 
     st.markdown(

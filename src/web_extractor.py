@@ -65,6 +65,16 @@ def get_website_name(url: str) -> str:
     return name
 
 
+_PROMPT_RESERVE_TOKENS = 4000
+
+_EXPORT_KEYWORDS = ('csv', 'json', 'excel', 'sql', 'html', 'export', 'extract', 'give me the data', 'table', 'download', 'file')
+
+
+def is_export_request(query: str) -> bool:
+    query_lower = query.lower()
+    return any(keyword in query_lower for keyword in _EXPORT_KEYWORDS)
+
+
 # Tags to remove during preprocessing (single pass)
 _REMOVE_TAGS = frozenset(['script', 'style', 'header', 'footer', 'nav', 'aside'])
 
@@ -98,17 +108,27 @@ class WebExtractor:
         self.current_url: str | None = None
         self.current_content: str | None = None
         self.preprocessed_content: str | None = None
-        self.conversation_history: list[str] = []
+        self.max_tokens = self._context_window(model_name)
+        # Leave room for the prompt template, conversation history and the answer.
         self.text_splitter = RecursiveCharacterTextSplitter(
-            chunk_size=32000,
+            chunk_size=self.max_tokens - _PROMPT_RESERVE_TOKENS,
             chunk_overlap=200,
             length_function=self.num_tokens_from_string,
         )
-        self.max_tokens = 128000 if model_name in ("gpt-4.1-mini", "gpt-4o-mini") else 16385
         self.query_cache: dict[tuple, str] = {}
         self.content_hash: str | None = None
         self.tor_config = tor_config or TorConfig()
         self.tor_scraper = TorScraper(self.tor_config)
+
+    @staticmethod
+    def _context_window(model_name: str) -> int:
+        if isinstance(model_name, str) and model_name.startswith(("gpt-4.1", "gpt-4o", "gemini-")):
+            return 128000
+        return 16385
+
+    async def close(self) -> None:
+        await self.playwright_scraper.close()
+        await self.tor_scraper.tor_manager.close()
 
     @staticmethod
     def num_tokens_from_string(string: str) -> int:
@@ -217,12 +237,10 @@ User: {query}"""
                 progress_callback("Extracting information...")
             response = await self._extract_info(user_input, conversation_history)
 
-        self.conversation_history.append(f"Human: {user_input}")
-        self.conversation_history.append(f"AI: {response}")
         return response
 
-    async def _fetch_url(self, url: str, pages: Optional[str] = None,
-                        url_pattern: Optional[str] = None,
+    async def _fetch_url(self, url: str, pages: str | None = None,
+                        url_pattern: str | None = None,
                         handle_captcha: bool = False,
                         progress_callback=None) -> str:
         self.current_url = url
@@ -239,7 +257,13 @@ User: {query}"""
             else:
                 # Regular scraping without Tor
                 if progress_callback:
-                    progress_callback(f"Fetching content from {url}")
+                    if handle_captcha:
+                        progress_callback(
+                            "Solve the CAPTCHA in the browser window that just opened. "
+                            "Scraping continues automatically once it's solved."
+                        )
+                    else:
+                        progress_callback(f"Fetching content from {url}")
 
                 # Don't use proxy for non-onion URLs
                 contents = await self.playwright_scraper.fetch_content(
@@ -317,32 +341,36 @@ User: {query}"""
         cache_key = (content_hash, query, self.model_name)
 
         # Only use cache for explicit data export requests (not conversational queries)
-        export_keywords = ['csv', 'json', 'excel', 'sql', 'html', 'export', 'extract', 'give me the data', 'table']
-        is_export_request = any(keyword in query.lower() for keyword in export_keywords)
+        export_request = is_export_request(query)
 
-        if is_export_request and cache_key in self.query_cache:
+        if export_request and cache_key in self.query_cache:
             return self.query_cache[cache_key]
 
         content_tokens = self.num_tokens_from_string(self.preprocessed_content)
 
-        if content_tokens <= self.max_tokens - 1000:
+        if content_tokens <= self.max_tokens - _PROMPT_RESERVE_TOKENS:
             extracted_data = await self._call_model(query, conversation_history)
         else:
             chunks = self.optimized_text_splitter(self.preprocessed_content)
             # Store original content, process chunks, restore
             original_content = self.preprocessed_content
             all_extracted_data = []
-            for chunk in chunks:
-                self.preprocessed_content = chunk
-                chunk_data = await self._call_model(query, conversation_history)
-                all_extracted_data.append(chunk_data)
-            self.preprocessed_content = original_content
-            extracted_data = self._merge_json_chunks(all_extracted_data)
+            try:
+                for chunk in chunks:
+                    self.preprocessed_content = chunk
+                    chunk_data = await self._call_model(query, conversation_history)
+                    all_extracted_data.append(chunk_data)
+            finally:
+                self.preprocessed_content = original_content
+            if export_request:
+                extracted_data = self._merge_json_chunks(all_extracted_data)
+            else:
+                extracted_data = "\n\n".join(part.strip() for part in all_extracted_data if part and part.strip())
 
         formatted_result = self._format_result(extracted_data, query)
 
         # Only cache export requests
-        if is_export_request:
+        if export_request:
             self.query_cache[cache_key] = formatted_result
 
         return formatted_result
@@ -374,10 +402,9 @@ User: {query}"""
 
     def _format_result(self, extracted_data: str, query: str) -> str | tuple[str, pd.DataFrame] | BytesIO:
         query_lower = query.lower()
-        export_keywords = ['csv', 'json', 'excel', 'sql', 'html', 'export', 'extract', 'give me the data', 'table', 'download', 'file']
 
         # Only try to parse as JSON if user explicitly requested data export
-        if any(keyword in query_lower for keyword in export_keywords):
+        if is_export_request(query):
             json_data = self._extract_json_data(extracted_data)
 
             if json_data is not None:
@@ -406,20 +433,19 @@ User: {query}"""
         # For conversational responses, return as-is (no JSON parsing)
         return extracted_data
 
-    def optimized_text_splitter(self, text: str) -> List[str]:
+    def optimized_text_splitter(self, text: str) -> list[str]:
         return self.text_splitter.split_text(text)
 
-    def _merge_json_chunks(self, chunks: List[str]) -> str:
+    def _merge_json_chunks(self, chunks: list[str]) -> str:
         merged_data = []
         for chunk in chunks:
-            try:
-                data = json.loads(chunk)
-                if isinstance(data, list):
-                    merged_data.extend(data)
-                else:
-                    merged_data.append(data)
-            except json.JSONDecodeError:
-                print(f"Error decoding JSON chunk: {chunk[:100]}...")
+            data = self._extract_json_data(chunk)
+            if data is None:
+                logger.warning(f"Could not parse JSON from chunk: {chunk[:100]}...")
+            elif isinstance(data, list):
+                merged_data.extend(data)
+            else:
+                merged_data.append(data)
         return json.dumps(merged_data)
 
     @staticmethod
@@ -525,5 +551,5 @@ User: {query}"""
             return f"Error: Invalid JSON data. Raw data: {data[:500]}..."
 
     @staticmethod
-    async def list_ollama_models() -> List[str]:
+    async def list_ollama_models() -> list[str]:
         return await OllamaModel.list_models()

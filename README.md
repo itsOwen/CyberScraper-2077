@@ -369,6 +369,8 @@ docker run -p 8501:8501 \
 10. Click "Create" to generate the new client ID.
 11. Download the new client configuration JSON file and rename it to `client_secret.json`.
 
+The app sends `http://localhost:<port>/` as the redirect URI. If you open it under a different address, set `GOOGLE_OAUTH_REDIRECT_URI` to the exact URI you registered above.
+
 ## ⚙️ Adjusting PlaywrightScraper Settings (optional)
 
 Customize the `PlaywrightScraper` settings to fit your scraping needs. If some websites are giving you issues, you might want to check the behavior of the website:
@@ -383,7 +385,7 @@ bypass_cloudflare: bool = True:
 
 Adjust these settings based on your target website and environment for optimal results.
 
-You can also bypass the captcha using the ```-captcha``` parameter at the end of the URL. The browser window will pop up, complete the captcha, and go back to your terminal window. Press enter and the bot will complete its task.
+You can also bypass the captcha using the ```-captcha``` parameter at the end of the URL. The browser window will pop up, complete the captcha there and the scraper continues on its own once the captcha is gone (it gives up waiting after 3 minutes and uses whatever is on the page).
 
 ## 🤝 Contributing
 

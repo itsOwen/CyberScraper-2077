@@ -18,9 +18,18 @@ import platform
 import subprocess
 import os
 import tempfile
-import aioconsole
 
 from ..utils.error_handler import ErrorMessages
+
+# Elements and titles left on the page while a CAPTCHA or bot challenge is still pending.
+_CAPTCHA_CHECK_SCRIPT = '''
+    () => Boolean(
+        document.querySelector(
+            'iframe[src*="recaptcha"], iframe[src*="hcaptcha"], iframe[src*="challenges.cloudflare.com"], ' +
+            '#challenge-form, #challenge-stage, .cf-turnstile, .g-recaptcha, .h-captcha'
+        ) || /just a moment|attention required/i.test(document.title)
+    )
+'''
 
 
 def _get_browser_channel():
@@ -49,6 +58,7 @@ class ScraperConfig:
         wait_for: str = 'domcontentloaded',
         use_current_browser: bool = False,
         use_persistent_context: bool = False,  # Use persistent context for max stealth
+        captcha_timeout: int = 180,  # Seconds to wait for the user to solve a CAPTCHA
         max_retries: int = 3,
         delay_after_load: int = 2,
         max_concurrent_pages: int = 5,
@@ -66,6 +76,7 @@ class ScraperConfig:
         self.wait_for = wait_for
         self.use_current_browser = use_current_browser
         self.use_persistent_context = use_persistent_context
+        self.captcha_timeout = captcha_timeout
         self.max_retries = max_retries
         self.delay_after_load = delay_after_load
         self.max_concurrent_pages = max_concurrent_pages
@@ -186,9 +197,20 @@ class PlaywrightScraper(BaseScraper):
         Returns:
             List of content strings from scraped pages
         """
-        browser = await self._get_browser(proxy, handle_captcha)
+        if handle_captcha:
+            if not self._can_show_browser_window():
+                return [
+                    "Error: CAPTCHA mode needs a visible browser window, which is not available here "
+                    "(for example inside Docker). Run CyberScraper locally to solve CAPTCHAs."
+                ]
+            # A pooled browser may be headless, and the user needs a visible window.
+            if self._browser and self._browser.is_connected():
+                await self._browser.close()
+                self._browser = None
+
         context = None
         try:
+            browser = await self._get_browser(proxy, handle_captcha)
             if handle_captcha:
                 # For CAPTCHA mode: create context, handle CAPTCHA, then scrape pages
                 context = await self.create_context(browser, proxy)
@@ -241,12 +263,19 @@ class PlaywrightScraper(BaseScraper):
 
         return contents
 
+    @staticmethod
+    def _can_show_browser_window() -> bool:
+        if platform.system() != "Linux":
+            return True
+        return bool(os.environ.get("DISPLAY") or os.environ.get("WAYLAND_DISPLAY"))
+
     async def handle_captcha(self, page: Page, url: str):
         """
-        Handle CAPTCHA solving by pausing execution and waiting for user input.
+        Open the URL in a visible browser window and wait until the user solves the CAPTCHA.
 
-        This method navigates to the URL and waits for the user to solve any CAPTCHAs
-        manually before continuing with the scraping process.
+        The page is checked every couple of seconds for common CAPTCHA and bot challenge
+        widgets. Scraping continues once they are gone, or after config.captcha_timeout
+        seconds, whichever comes first.
 
         Args:
             page (Page): Playwright page object
@@ -256,9 +285,13 @@ class PlaywrightScraper(BaseScraper):
         try:
             await page.goto(url, wait_until=self.config.wait_for, timeout=self.config.timeout)
 
-            print("Please solve the CAPTCHA in the browser window.")
-            print("Once solved, press Enter in this console to continue...")
-            await aioconsole.ainput()
+            loop = asyncio.get_running_loop()
+            deadline = loop.time() + self.config.captcha_timeout
+            while await self._captcha_pending(page):
+                if loop.time() >= deadline:
+                    self.logger.warning("CAPTCHA still visible after timeout, continuing with current page")
+                    break
+                await asyncio.sleep(2)
 
             # Use 'load' instead of 'networkidle' - modern sites never reach networkidle
             # due to constant analytics/tracking requests
@@ -270,6 +303,15 @@ class PlaywrightScraper(BaseScraper):
                 self.logger.warning("Browser was closed during CAPTCHA handling")
                 raise
             self.logger.warning(f"CAPTCHA wait completed with: {e}")
+
+    async def _captcha_pending(self, page: Page) -> bool:
+        try:
+            return await page.evaluate(_CAPTCHA_CHECK_SCRIPT)
+        except Exception as e:
+            if "closed" in str(e).lower():
+                raise
+            # The page is navigating (e.g. right after the challenge was solved).
+            return True
 
     async def launch_and_connect_to_chrome(self, playwright):
         """
@@ -434,8 +476,8 @@ class PlaywrightScraper(BaseScraper):
             launch_options = {
                 'headless': self.config.headless and not handle_captcha,
                 'args': ['--no-sandbox', '--disable-setuid-sandbox', '--disable-infobars',
-                         '--window-position=0,0', '--ignore-certifcate-errors',
-                         '--ignore-certifcate-errors-spki-list'],
+                         '--window-position=0,0', '--ignore-certificate-errors',
+                         '--ignore-certificate-errors-spki-list'],
                 'proxy': {'server': proxy} if proxy else None
             }
             if channel:
@@ -736,7 +778,8 @@ class PlaywrightScraper(BaseScraper):
                 await asyncio.sleep(2)
 
             content = await page.content()
-            if "Cloudflare" not in content or "ray ID" not in content.lower():
+            content_lower = content.lower()
+            if "cloudflare" not in content_lower or "ray id" not in content_lower:
                 self.logger.info("Successfully bypassed Cloudflare")
                 return content
 

@@ -18,42 +18,15 @@
 ## 🤝 Sponsor
 
 <p align="center">
-  <a href="https://mangoproxy.com/?utm_source=itsowen&utm_medium=partner&utm_campaign=itsowen_github">
-    <img src="assets/mangoproxy-banner.png" alt="MangoProxy — Premium Proxies. Limitless Possibilities." width="100%">
+  <a href="https://www.swiftproxy.net/?ref=CyberScraper">
+    <img src="assets/swiftproxy-banner.png" alt="Swiftproxy — More pages. More routes. One scraper." width="100%">
   </a>
 </p>
 
 <p align="center">
-  <b><a href="https://mangoproxy.com/?utm_source=itsowen&utm_medium=partner&utm_campaign=itsowen_github">MangoProxy</a></b> — Residential, ISP, Mobile and Datacenter proxy service designed for professional tasks where stability, speed, and anonymity matter.<br>
-  90M+ IP pool across 200+ locations, HTTP &amp; SOCKS5. Use code <b><code>OWEN</code></b> for 8% off Static ISP Proxies.
+  <b><a href="https://www.swiftproxy.net/?ref=CyberScraper">Swiftproxy</a></b> — Reliable residential proxies for web scraping, browser automation, and data collection.<br>
+  Access 90M+ residential IPs across 220+ locations with rotating and sticky sessions. Get 10% off with code <b><code>PROXY90</code></b>.
 </p>
-
-<table width="100%">
-<tr>
-<td width="50%" align="center">
-  <a href="https://www.ipcook.com/?ref=EEXXM6&amp;utm_source=github&amp;utm_medium=referral&amp;utm_campaign=itsowen_cyberscraper">
-    <img src="assets/ipcook-banner.png" alt="IPcook — Premium Residential Proxies for AI-Powered Scraping" width="100%">
-  </a>
-</td>
-<td width="50%" align="center">
-  <a href="https://www.thordata.com/?ls=github&amp;lk=cyberscraper">
-    <img src="assets/thordata-banner.png" alt="Thordata — Global IPs. Broader Access. Greater Possibilities." width="100%">
-  </a>
-</td>
-</tr>
-<tr>
-<td align="center" valign="top">
-  <b><a href="https://www.ipcook.com/?ref=EEXXM6&amp;utm_source=github&amp;utm_medium=referral&amp;utm_campaign=itsowen_cyberscraper">IPcook</a></b> — Scrape more. Pay only for what you need.<br>
-  Residential proxies from $0.3–$3.2/GB, with pay-as-you-go traffic that never expires or monthly plans with automatic renewal for continuous scraping workloads.<br>
-  Flexible IP rotation, 55M+ residential IPs across 185+ locations, 99.99% uptime, and &lt;0.5s average response time.<br>
-  Try 100MB free and use code <b><code>WELCOME20</code></b> for 20% OFF.
-</td>
-<td align="center" valign="top">
-  <b><a href="https://www.thordata.com/?ls=github&amp;lk=cyberscraper">Thordata</a></b> — Built for high-throughput data collection: market research, ad verification, e-commerce monitoring and social automation.<br>
-  100M+ residential IPs across 190+ countries, with country- and city-level targeting and unlimited concurrent connections.
-</td>
-</tr>
-</table>
 
 ## 🔍 About
 

@@ -170,6 +170,10 @@ If you want to use Ollama with the Docker setup:
 
 Note: Ensure that your firewall allows connections to port 11434 for Ollama.
 
+## ☁️ One-Click Deploy
+
+[![Deploy on RepoCloud](https://d16t0pc4846x52.cloudfront.net/deploylobe.svg)](https://repocloud.io/details/CyberScraper%202077/)
+
 ## 🚀 Usage
 
 1. Fire up the Streamlit app:
